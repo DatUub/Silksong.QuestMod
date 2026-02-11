@@ -1,0 +1,52 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <Import Condition="Exists('SilksongPath.props')" Project="SilksongPath.props" />
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <EnableNETAnalyzers>True</EnableNETAnalyzers>
+    <AnalysisMode>recommended</AnalysisMode>
+    <NoWarn>$(NoWarn);MSB3270</NoWarn>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <AssemblyTitle>QuestMod</AssemblyTitle>
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BepInEx.Analyzers" Version="1.0.8" PrivateAssets="all" />
+    <PackageReference Include="BepInEx.Core" Version="5.4.21" />
+    <PackageReference Include="HarmonyX" Version="2.9.0" />
+    <PackageReference Include="Hamunii.BepInEx.AutoPlugin" Version="2.0.1" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.Unity.Analyzers" Version="1.25.0" PrivateAssets="all" />
+    <PackageReference Include="UnityEngine.Modules" Version="6000.0.50" IncludeAssets="compile" />
+    <PackageReference Include="Silksong.GameLibs" Version="1.2.0-silksong1.0.29315" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="MMHOOK_Assembly-CSharp">
+      <HintPath>$(SilksongFolder)/BepInEx/plugins/MMHOOK/Managed/MMHOOK_Assembly-CSharp.dll</HintPath>
+    </Reference>
+    <Reference Include="Silksong.FsmUtil">
+      <HintPath>$(SilksongFolder)/BepInEx/plugins/silksong_modding-FsmUtil/Silksong.FsmUtil.dll</HintPath>
+    </Reference>
+    <Reference Include="Silksong.DataManager">
+      <HintPath>$(SilksongFolder)/BepInEx/plugins/silksong_modding-DataManager/Silksong.DataManager.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityHelper">
+      <HintPath>$(SilksongFolder)/BepInEx/plugins/silksong_modding-UnityHelper/UnityHelper.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+  <Target Name="CopyMod" AfterTargets="PostBuildEvent" Condition="'$(SilksongFolder)' != ''">
+      <ItemGroup>
+          <Binaries Include="$(TargetPath)" />
+          <Binaries Include="$(TargetDir)/$(TargetName).pdb" />
+      </ItemGroup>
+
+      <Copy SourceFiles="@(Binaries)" DestinationFolder="$(SilksongFolder)/BepInEx/plugins/QuestMod" />
+  </Target>
+</Project>
