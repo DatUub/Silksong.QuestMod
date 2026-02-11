@@ -5,7 +5,4 @@ obj/
 .vs/
 *.DotSettings.user
 
-bell_dump*.txt
-bell_dropper_dump.txt
-
-QuestsCount1.md
+dumps/

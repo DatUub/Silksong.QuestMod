@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using HutongGames.PlayMaker;
 using Silksong.UnityHelper.Extensions;
 using UnityEngine;
@@ -62,26 +63,35 @@ namespace QuestMod
             if (dropType == null || dropType.Actions == null)
                 return false;
 
-            bool modified = false;
-
+            var keepActions = new List<FsmStateAction>();
             foreach (var action in dropType.Actions)
             {
                 if (action == null)
                     continue;
 
                 string typeName = action.GetType().Name;
-
-                if (typeName == "CheckAlertRangeByName" ||
-                    typeName == "SendRandomEventV4" ||
-                    typeName == "CheckIfToolEquipped")
+                if (typeName == "SendEvent")
                 {
-                    action.Enabled = false;
-                    modified = true;
-                    QuestModPlugin.Log.LogInfo($"SilverBellPatch: Disabled {typeName} on {fsm.gameObject.name}");
+                    keepActions.Add(action);
+                    QuestModPlugin.Log.LogInfo($"SilverBellPatch: Keeping {typeName} on {fsm.gameObject.name}");
+                }
+                else
+                {
+                    QuestModPlugin.Log.LogInfo($"SilverBellPatch: Removing {typeName} from {fsm.gameObject.name}");
                 }
             }
 
-            return modified;
+            dropType.Actions = keepActions.ToArray();
+
+            var silverTransition = new List<FsmTransition>();
+            foreach (var t in dropType.Transitions)
+            {
+                if (t.EventName == "SILVER")
+                    silverTransition.Add(t);
+            }
+            dropType.Transitions = silverTransition.ToArray();
+
+            return true;
         }
     }
 }
