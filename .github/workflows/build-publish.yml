@@ -51,7 +51,7 @@ jobs:
         echo "version=$VERSION" >> $GITHUB_OUTPUT
 
     - name: Upload Package Artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: thunderstore-package
         path: thunderstore/dist/*.zip
