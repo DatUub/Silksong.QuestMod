@@ -1,18 +1,15 @@
 # QuestMod — TODO
 
 ### Release
-- [ ] Write changelog for v1.0.0
-- [ ] Final version bump to 1.0.0
-- [ ] Create GitHub repo and push
-- [ ] Set up issue labels (bug, enhancement, all-wishes-mode, quest-customization, etc.)
-- [ ] Create GitHub issues for known bugs:
+
+- [x] Set up issue labels (bug, enhancement, all-wishes-mode, quest-customization, delivery-system, silk-soul, gui, itemchanger)
+- [x] Create GitHub issues for known bugs (#5-#8):
     * Plasmium quests uncompletable without Needle Phial in All Wishes Mode
     * Shakra not appearing with Trail's End in All Wishes Mode
     * Junilana missing NPC behavior in All Wishes Mode
     * Mr Mushroom not spawning at later locations in All Wishes Mode
 - [ ] Add `THUNDERSTORE_API_KEY` secret to GitHub repo
 - [ ] Flip `allow-release` to `'true'` in `build-publish.yml`
-- [ ] Tag v0.1.0 and push tag to trigger release
 - [ ] Announce in the modding Discord server
 
 ---

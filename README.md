@@ -146,3 +146,7 @@ Pull requests are welcome! Please:
 - Keep PRs focused on a single feature or fix
 - Test in-game before submitting
 - Check `BepInEx/LogOutput.log` for errors
+
+## SPECIAL THANKS
+
+- **TheMythical2046** for the original mod request, quest research and testing, and feedback :3
