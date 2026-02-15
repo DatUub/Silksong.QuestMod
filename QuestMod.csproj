@@ -3,7 +3,7 @@
   <Import Condition="Exists('SilksongPath.props')" Project="SilksongPath.props" />
 
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>netstandard2.1</TargetFramework>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <EnableNETAnalyzers>True</EnableNETAnalyzers>
@@ -22,6 +22,7 @@
     <PackageReference Include="HarmonyX" Version="2.9.0" />
     <PackageReference Include="Hamunii.BepInEx.AutoPlugin" Version="2.0.1" PrivateAssets="all" />
     <PackageReference Include="Microsoft.Unity.Analyzers" Version="1.25.0" PrivateAssets="all" />
+    <PackageReference Include="System.Text.Json" Version="10.0.3" />
     <PackageReference Include="UnityEngine.Modules" Version="6000.0.50" IncludeAssets="compile" />
     <PackageReference Include="Silksong.GameLibs" Version="1.2.0-silksong1.0.29315" />
   </ItemGroup>
