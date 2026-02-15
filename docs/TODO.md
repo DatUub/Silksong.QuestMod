@@ -1,8 +1,8 @@
 # QuestMod — TODO
 
 ### Release
-- [ ] Write changelog for v0.1.0
-- [ ] Final version bump to 0.1.0
+- [ ] Write changelog for v1.0.0
+- [ ] Final version bump to 1.0.0
 - [ ] Create GitHub repo and push
 - [ ] Set up issue labels (bug, enhancement, all-wishes-mode, quest-customization, etc.)
 - [ ] Create GitHub issues for known bugs:

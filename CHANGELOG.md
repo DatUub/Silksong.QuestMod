@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.1.0 — Initial Release
+## v1.0.0 — Initial Release
 
 ### Features
 - **Quest Management GUI** — Accept, complete, unaccept, and uncomplete any quest from an in-game overlay (default: F9)
