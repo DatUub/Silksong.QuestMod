@@ -93,7 +93,7 @@ jobs:
     - name: Restore tools
       run: dotnet tool restore
     - name: Download artifact
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v7
       with:
         name: thunderstore-package
         path: thunderstore/dist
@@ -112,7 +112,7 @@ jobs:
 
     steps:
     - name: Download artifact
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v7
       with:
         name: thunderstore-package
         path: thunderstore/dist
