@@ -27,18 +27,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Reference Include="MMHOOK_Assembly-CSharp">
-      <HintPath>$(SilksongFolder)/BepInEx/plugins/MMHOOK/Managed/MMHOOK_Assembly-CSharp.dll</HintPath>
-    </Reference>
-    <Reference Include="Silksong.FsmUtil">
-      <HintPath>$(SilksongFolder)/BepInEx/plugins/silksong_modding-FsmUtil/Silksong.FsmUtil.dll</HintPath>
-    </Reference>
-    <Reference Include="Silksong.DataManager">
-      <HintPath>$(SilksongFolder)/BepInEx/plugins/silksong_modding-DataManager/Silksong.DataManager.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityHelper">
-      <HintPath>$(SilksongFolder)/BepInEx/plugins/silksong_modding-UnityHelper/UnityHelper.dll</HintPath>
-    </Reference>
+    <PackageReference Include="Silksong.FsmUtil" Version="0.3.13" />
+    <PackageReference Include="Silksong.DataManager" Version="1.2.1" />
+    <PackageReference Include="Silksong.UnityHelper" Version="1.1.1" />
   </ItemGroup>
 
   <ItemGroup>

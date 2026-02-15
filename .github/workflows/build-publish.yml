@@ -34,39 +34,14 @@ jobs:
       with:
         dotnet-version: '10.0.x'
 
-    - name: Download Thunderstore Dependencies
-      run: |
-        DEPS_DIR="${{ runner.temp }}/silksong-deps"
-        mkdir -p "$DEPS_DIR/BepInEx/plugins"
-
-        download_ts_pkg() {
-          local ns=$1 name=$2 ver=$3 dest=$4
-          local url="https://thunderstore.io/package/download/${ns}/${name}/${ver}/"
-          echo "Downloading ${ns}-${name} v${ver}..."
-          curl -sSL "$url" -o /tmp/pkg.zip
-          mkdir -p "$DEPS_DIR/BepInEx/plugins/$dest"
-          unzip -qo /tmp/pkg.zip -d /tmp/pkg_extract
-          find /tmp/pkg_extract -name '*.dll' -exec cp {} "$DEPS_DIR/BepInEx/plugins/$dest/" \;
-          rm -rf /tmp/pkg.zip /tmp/pkg_extract
-        }
-
-        download_ts_pkg silksong_modding FsmUtil        0.1.0 silksong_modding-FsmUtil
-        download_ts_pkg silksong_modding DataManager    0.1.0 silksong_modding-DataManager
-        download_ts_pkg silksong_modding UnityHelper    0.1.0 silksong_modding-UnityHelper
-        download_ts_pkg silksong_modding HookGenPatcher 0.0.1 MMHOOK/Managed
-
-        echo "SilksongFolder=$DEPS_DIR" >> $GITHUB_ENV
-        echo "Downloaded deps to $DEPS_DIR"
-        find "$DEPS_DIR" -name '*.dll' | head -20
-
     - name: Restore
-      run: dotnet restore -p:SilksongFolder="${{ env.SilksongFolder }}"
+      run: dotnet restore
 
     - name: Build
-      run: dotnet build -c Release --no-restore -p:SilksongFolder="${{ env.SilksongFolder }}"
+      run: dotnet build -c Release --no-restore
 
     - name: Prepare Thunderstore Package
-      run: dotnet build -c Release -t:ThunderstorePack --no-restore -p:SilksongFolder="${{ env.SilksongFolder }}"
+      run: dotnet build -c Release -t:ThunderstorePack --no-restore
 
     - name: Get Version
       id: version
