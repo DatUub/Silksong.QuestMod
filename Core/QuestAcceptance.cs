@@ -25,146 +25,56 @@ namespace QuestMod
 
     public static class QuestAcceptance
     {
-        private static readonly HashSet<string> ExcludedQuests = new HashSet<string>
+        public static string GetExclusionConflict(string questName)
         {
-            "Courier Delivery Bonebottom",
-            "Courier Delivery Pilgrims Rest",
-            "Courier Delivery Songclave",
-            "Courier Delivery Fleatopia",
-            "Courier Delivery Mask Maker",
-            "Courier Delivery Dustpens Slave",
-            "Courier Delivery Fixer",
-        };
+            if (!QuestRegistry.MutuallyExclusiveQuests.TryGetValue(questName, out string conflicting))
+                return null;
 
-        private static readonly Dictionary<string, string[]> ChainRegistry = new Dictionary<string, string[]>
-        {
-            { "Main Story", new[] { "Black Thread Pt0", "Black Thread Pt1 Shamans", "Diving Bell Pt1 Inspect", "Diving Bell Pt2 Ballow", "Diving Bell Pt3 Descend", "Black Thread Pt2 Abyss", "Black Thread Pt3 Escape", "Black Thread Pt4 Return", "Black Thread Pt5 Heart", "Black Thread Pt6 Flower" } },
-            { "Citadel", new[] { "Citadel Seeker", "Citadel Investigate", "Citadel Ascent", "Citadel Ascent Melodies", "Citadel Ascent Lift", "Citadel Ascent Silk Defeat" } },
-            { "Sprintmaster", new[] { "Sprintmaster Pre", "Sprintmaster Race" } },
-            { "Soul Snare", new[] { "Soul Snare Pre", "Soul Snare" } },
-            { "Crow Feathers", new[] { "Crow Feathers Pre", "Crow Feathers" } },
-            { "Mossberry", new[] { "Mossberry Collection Pre", "Mossberry Collection 1" } },
-            { "Save the Fleas", new[] { "Save the Fleas Pre", "Save the Fleas" } },
-            { "Flea Games", new[] { "Flea Games Pre", "Flea Games" } },
-            { "Steel Sentinel", new[] { "Steel Sentinel", "Steel Sentinel Pt2" } },
-            { "Pinstress Battle", new[] { "Pinstress Battle Pre", "Pinstress Battle" } },
-        };
+            var rt = QuestDataAccess.GetRuntimeData();
+            if (rt == null || !rt.Contains(conflicting))
+                return null;
 
-        private static readonly Dictionary<string, string> ChainDisplayNames = new Dictionary<string, string>
-        {
-            { "Main Story", "Main Story" },
-            { "Citadel", "Pharloom's Crown" },
-            { "Sprintmaster", "Fastest in Pharloom" },
-            { "Soul Snare", "Silk and Soul" },
-            { "Crow Feathers", "Crawbug Clearing" },
-            { "Mossberry", "Berry Picking" },
-            { "Save the Fleas", "The Lost Fleas" },
-            { "Flea Games", "Ecstasy of the End" },
-            { "Steel Sentinel", "A Vassal Lost" },
-            { "Pinstress Battle", "Fatal Resolve" },
-        };
+            var qd = rt[conflicting];
+            if (QuestDataAccess.IsAccepted(qd) || QuestDataAccess.IsCompleted(qd))
+                return conflicting;
 
-        private static readonly HashSet<string> ChainStepNames;
-
-        static QuestAcceptance()
-        {
-            ChainStepNames = new HashSet<string>();
-            foreach (var chain in ChainRegistry.Values)
-            {
-                foreach (var step in chain)
-                    ChainStepNames.Add(step);
-            }
+            return null;
         }
 
-        private static readonly Dictionary<string, string> displayNames = new Dictionary<string, string>
+        public static bool IsChainPrereqMet(string questName)
         {
-            { "Grand Gate Bellshrines", "Grand Gate" },
-            { "Bellbeast Rescue", "Beast in the Bells" },
-            { "Citadel Investigate", "Silent Halls" },
-            { "Citadel Seeker", "The Great Citadel" },
-            { "Citadel Ascent", "Pharloom's Crown" },
-            { "Citadel Ascent Melodies", "Pharloom's Crown" },
-            { "Citadel Ascent Lift", "Pharloom's Crown" },
-            { "Citadel Ascent Silk Defeat", "Pale Monarch" },
-            { "Silk Defeat Snare", "Soul Snare" },
-            { "The Threadspun Town", "The Threadspun Town" },
-            { "Diving Bell Pt1 Inspect", "The Dark Below" },
-            { "Diving Bell Pt2 Ballow", "The Dark Below" },
-            { "Diving Bell Pt3 Descend", "The Dark Below" },
-            { "Black Thread Pt0", "After the Fall" },
-            { "Black Thread Pt1 Shamans", "Awaiting the End" },
-            { "Black Thread Pt2 Abyss", "The Dark Below" },
-            { "Black Thread Pt3 Escape", "Return to Pharloom" },
-            { "Black Thread Pt4 Return", "Spell Seeker" },
-            { "Black Thread Pt5 Heart", "The Old Hearts" },
-            { "Black Thread Pt6 Flower", "Last Dive" },
-            { "Brolly Get", "Flexile Spines" },
-            { "Huntress Quest", "Broodfeast" },
-            { "Huntress Quest Runt", "Runtfeast" },
-            { "Shiny Bell Goomba", "Silver Bells" },
-            { "Rock Rollers", "Volatile Flintbeetles" },
-            { "Pilgrim Rags", "Garb of the Pilgrims" },
-            { "Fine Pins", "Fine Pins" },
-            { "Song Pilgrim Cloaks", "Cloaks of the Choir" },
-            { "Roach Killing", "Roach Guts" },
-            { "Crow Feathers", "Crawbug Clearing" },
-            { "Crow Feathers Pre", "Crawbug Clearing" },
-            { "Belltown House Start", "Restoration of Bellhart" },
-            { "Belltown House Mid", "Bellhart's Glory" },
-            { "Songclave Donation 1", "Building Up Songclave" },
-            { "Songclave Donation 2", "Strengthening Songclave" },
-            { "Building Materials", "Bone Bottom Repairs" },
-            { "Building Materials (Bridge)", "A Lifesaving Bridge" },
-            { "Building Materials (Statue)", "An Icon of Hope" },
-            { "Courier Delivery Bonebottom", "Bone Bottom Supplies" },
-            { "Courier Delivery Dustpens Slave", "Queen's Egg" },
-            { "Courier Delivery Fleatopia", "Fleatopia Supplies" },
-            { "Courier Delivery Fixer", "Survivor's Camp Supplies" },
-            { "Courier Delivery Mask Maker", "Liquid Lacquer" },
-            { "Courier Delivery Pilgrims Rest", "Pilgrim's Rest Supplies" },
-            { "Courier Delivery Songclave", "Songclave Supplies" },
-            { "Save Courier Short", "My Missing Courier" },
-            { "Save Courier Tall", "My Missing Brother" },
-            { "Great Gourmand", "Great Taste of Pharloom" },
-            { "Soul Snare", "Silk and Soul" },
-            { "Soul Snare Pre", "Silk and Soul" },
-            { "Flea Games", "Ecstasy of the End" },
-            { "Flea Games Pre", "Ecstasy of the End" },
-            { "Mr Mushroom", "Passing of the Age" },
-            { "Extractor Blue", "Alchemist's Assistant" },
-            { "Extractor Blue Worms", "Advanced Alchemy" },
-            { "Shell Flowers", "Rite of the Pollip" },
-            { "Mossberry Collection 1", "Berry Picking" },
-            { "Mossberry Collection Pre", "Berry Picking" },
-            { "Save the Fleas", "The Lost Fleas" },
-            { "Save the Fleas Pre", "The Lost Fleas" },
-            { "Destroy Thread Cores", "Dark Hearts" },
-            { "Journal", "Bugs of Pharloom" },
-            { "A Pinsmiths Tools", "Pinmaster's Oil" },
-            { "Ant Trapper", "The Hidden Hunter" },
-            { "Beastfly Hunt", "Savage Beastfly" },
-            { "Broodmother Hunt", "The Wailing Mother" },
-            { "Doctor Curse Cure", "Infestation Operation" },
-            { "Skull King", "The Terrible Tyrant" },
-            { "Sprintmaster Race", "Fastest in Pharloom" },
-            { "Steel Sentinel", "A Vassal Lost" },
-            { "Steel Sentinel Pt2", "A Vassal Lost" },
-            { "Garmond Black Threaded", "Hero's Call" },
-            { "Pinstress Battle", "Fatal Resolve" },
-            { "Pinstress Battle Pre", "Fatal Resolve" },
-            { "Save City Merchant", "The Wandering Merchant" },
-            { "Save City Merchant Bridge", "The Lost Merchant" },
-            { "Save Sherma", "Balm for the Wounded" },
-            { "Shakra Final Quest", "Trail's End" },
-            { "Song Knight", "Final Audience" },
-            { "Sprintmaster Pre", "Fastest in Pharloom" },
-            { "Tormented Trobbio", "Pain, Anguish and Misery" },
-            { "Wood Witch Curse", "Rite of Rebirth" },
-        };
+            foreach (var chain in QuestRegistry.ChainRegistry.Values)
+            {
+                for (int i = 0; i < chain.Length; i++)
+                {
+                    if (chain[i] != questName)
+                        continue;
+
+                    if (i == 0)
+                        return true;
+
+                    var rt = QuestDataAccess.GetRuntimeData();
+                    if (rt == null)
+                        return false;
+
+                    for (int j = 0; j < i; j++)
+                    {
+                        if (!rt.Contains(chain[j]))
+                            return false;
+                        if (!QuestDataAccess.IsCompleted(rt[chain[j]]))
+                            return false;
+                    }
+                    return true;
+                }
+            }
+
+            return true;
+        }
+
 
         public static string GetDisplayName(string internalName)
         {
-            if (displayNames.TryGetValue(internalName, out string name))
+            if (QuestRegistry.DisplayNames.TryGetValue(internalName, out string name))
                 return name;
             return internalName;
         }
@@ -199,7 +109,7 @@ namespace QuestMod
                 if (string.IsNullOrEmpty(questName))
                     continue;
 
-                if (ExcludedQuests.Contains(questName))
+                if (QuestRegistry.ExcludedQuests.Contains(questName))
                 {
                     skipped++;
                     continue;
@@ -209,6 +119,12 @@ namespace QuestMod
                     continue;
 
                 if (!QuestModPlugin.IsQuestDiscovered(questName))
+                {
+                    skipped++;
+                    continue;
+                }
+
+                if (!IsChainPrereqMet(questName))
                 {
                     skipped++;
                     continue;
@@ -226,7 +142,10 @@ namespace QuestMod
             AcceptAllQuests();
         }
 
-        public static void ForceAcceptAllQuests()
+        public static void ForceAcceptAllQuests() => ForceAllQuestsOp(complete: false);
+        public static void ForceCompleteAllQuests() => ForceAllQuestsOp(complete: true);
+
+        private static void ForceAllQuestsOp(bool complete)
         {
             if (PlayerData.instance == null) return;
             var rt = QuestDataAccess.GetRuntimeData();
@@ -241,7 +160,7 @@ namespace QuestMod
             {
                 var questName = quest.name;
                 if (string.IsNullOrEmpty(questName)) continue;
-                if (ExcludedQuests.Contains(questName)) continue;
+                if (QuestRegistry.ExcludedQuests.Contains(questName)) continue;
                 if (rt.Contains(questName)) continue;
 
                 var template = GetAnyValue(rt);
@@ -251,110 +170,19 @@ namespace QuestMod
                 injected++;
             }
 
-            AcceptAllQuests();
+            ModifyAllQuests(rt, complete);
 
             PlayerData.instance.blackThreadWorld = savedActState;
-            QuestModPlugin.Log.LogInfo($"Force accepted ALL quests (injected {injected} new, total ScriptableObjects: {allQuests.Length}), act state preserved");
-        }
-
-        public static void ForceCompleteAllQuests()
-        {
-            if (PlayerData.instance == null) return;
-            var rt = QuestDataAccess.GetRuntimeData();
-            if (rt == null) return;
-
-            bool savedActState = PlayerData.instance.blackThreadWorld;
-
-            var allQuests = Resources.FindObjectsOfTypeAll<FullQuestBase>();
-            int injected = 0;
-
-            foreach (var quest in allQuests)
-            {
-                var questName = quest.name;
-                if (string.IsNullOrEmpty(questName)) continue;
-                if (ExcludedQuests.Contains(questName)) continue;
-                if (rt.Contains(questName)) continue;
-
-                var template = GetAnyValue(rt);
-                if (template == null) continue;
-                var newData = QuestDataAccess.SetFields(template, seen: true, accepted: true, completed: true, wasEver: true);
-                rt[questName] = newData;
-                injected++;
-            }
-
-            CompleteAllQuests();
-
-            PlayerData.instance.blackThreadWorld = savedActState;
-            QuestModPlugin.Log.LogInfo($"Force completed ALL quests (injected {injected} new, total ScriptableObjects: {allQuests.Length}), act state preserved");
+            var verb = complete ? "completed" : "accepted";
+            QuestModPlugin.Log.LogInfo($"Force {verb} ALL quests (injected {injected} new, total ScriptableObjects: {allQuests.Length}), act state preserved");
         }
 
         public static void AcceptAllQuests()
         {
-            QuestModPlugin.Log.LogInfo("AcceptAllQuests called");
-
             if (PlayerData.instance == null) return;
             var rt = QuestDataAccess.GetRuntimeData();
             if (rt == null) return;
-
-            int count = 0;
-            var keys = new List<object>();
-            foreach (var key in rt.Keys) keys.Add(key);
-
-            foreach (string key in keys)
-            {
-                var qd = rt[key];
-                qd = QuestDataAccess.SetFields(qd, seen: true, accepted: true, completed: QuestDataAccess.IsCompleted(qd), wasEver: QuestDataAccess.IsCompleted(qd));
-                rt[key] = qd;
-                count++;
-            }
-            QuestModPlugin.Log.LogInfo($"Accepted {count} quests");
-        }
-
-        public static void ListQuests()
-        {
-            QuestModPlugin.Log.LogInfo("ListQuests called");
-
-            if (PlayerData.instance == null) return;
-            var rt = QuestDataAccess.GetRuntimeData();
-            if (rt == null) return;
-
-            QuestModPlugin.Log.LogInfo("=== Quest List ===");
-            int count = 0;
-            foreach (DictionaryEntry kvp in rt)
-            {
-                var qd = kvp.Value;
-                QuestModPlugin.Log.LogInfo($"  {kvp.Key}: Seen={QuestDataAccess.HasBeenSeen(qd)}, Accepted={QuestDataAccess.IsAccepted(qd)}, Completed={QuestDataAccess.IsCompleted(qd)}");
-                count++;
-            }
-            QuestModPlugin.Log.LogInfo($"Listed {count} quests");
-
-            DiscoverQuestObjects();
-        }
-
-        private static void DiscoverQuestObjects()
-        {
-            QuestModPlugin.Log.LogInfo("=== Discovering FullQuestBase Objects ===");
-
-            var allQuests = Resources.FindObjectsOfTypeAll<FullQuestBase>();
-            QuestModPlugin.Log.LogInfo($"Found {allQuests.Length} FullQuestBase objects");
-
-            foreach (var quest in allQuests)
-            {
-                var questName = quest.name ?? "?";
-                var targets = quest.Targets;
-                if (targets == null || targets.Count == 0)
-                    continue;
-
-                var sb = new System.Text.StringBuilder();
-                sb.Append($"  {questName}: ");
-
-                foreach (var target in targets)
-                {
-                    sb.Append($"[{target.ItemName}x{target.Count}] ");
-                }
-
-                QuestModPlugin.Log.LogInfo(sb.ToString());
-            }
+            ModifyAllQuests(rt, complete: false);
         }
 
         public static List<QuestInfo> GetQuestList()
@@ -403,49 +231,20 @@ namespace QuestMod
 
         public static void AcceptQuest(string name)
         {
-            QuestModPlugin.Log.LogInfo($"AcceptQuest called for: {name}");
-            if (PlayerData.instance == null) return;
-            var rt = QuestDataAccess.GetRuntimeData();
-            if (rt == null) { QuestModPlugin.Log.LogWarning("AcceptQuest: RuntimeData is null"); return; }
-            object qd;
-            if (!rt.Contains(name))
-            {
-                var template = GetAnyValue(rt);
-                if (template == null) { QuestModPlugin.Log.LogWarning("AcceptQuest: RuntimeData empty"); return; }
-                qd = QuestDataAccess.SetFields(template, seen: false, accepted: false, completed: false, wasEver: false);
-                rt[name] = qd;
-                QuestModPlugin.Log.LogInfo($"Injected into RuntimeData: {name}");
-            }
-            else
-            {
-                qd = rt[name];
-            }
+            var (rt, qd) = EnsureQuestEntry(name);
+            if (rt == null) return;
             qd = QuestDataAccess.SetFields(qd, seen: true, accepted: true, completed: QuestDataAccess.IsCompleted(qd), wasEver: QuestDataAccess.IsCompleted(qd));
             rt[name] = qd;
-            QuestModPlugin.Log.LogInfo($"Accepted: {name}");
+            QuestModPlugin.LogDebugInfo($"Accepted: {name}");
         }
 
         public static void CompleteQuest(string name)
         {
-            if (PlayerData.instance == null) return;
-            var rt = QuestDataAccess.GetRuntimeData();
+            var (rt, qd) = EnsureQuestEntry(name);
             if (rt == null) return;
-            object qd;
-            if (!rt.Contains(name))
-            {
-                var template = GetAnyValue(rt);
-                if (template == null) return;
-                qd = QuestDataAccess.SetFields(template, seen: false, accepted: false, completed: false, wasEver: false);
-                rt[name] = qd;
-                QuestModPlugin.Log.LogInfo($"Injected into RuntimeData: {name}");
-            }
-            else
-            {
-                qd = rt[name];
-            }
             qd = QuestDataAccess.SetFields(qd, seen: true, accepted: true, completed: true, wasEver: true);
             rt[name] = qd;
-            QuestModPlugin.Log.LogInfo($"Completed: {name}");
+            QuestModPlugin.LogDebugInfo($"Completed: {name}");
         }
 
         public static void UnacceptQuest(string name)
@@ -458,7 +257,7 @@ namespace QuestMod
                 var qd = rt[name];
                 qd = QuestDataAccess.SetFields(qd, seen: true, accepted: false, completed: false, wasEver: QuestDataAccess.IsCompleted(qd));
                 rt[name] = qd;
-                QuestModPlugin.Log.LogInfo($"Unaccepted: {name}");
+                QuestModPlugin.LogDebugInfo($"Unaccepted: {name}");
             }
         }
 
@@ -472,7 +271,7 @@ namespace QuestMod
                 var qd = rt[name];
                 qd = QuestDataAccess.SetFields(qd, seen: true, accepted: true, completed: false, wasEver: true);
                 rt[name] = qd;
-                QuestModPlugin.Log.LogInfo($"Uncompleted: {name}");
+                QuestModPlugin.LogDebugInfo($"Uncompleted: {name}");
             }
         }
 
@@ -481,28 +280,55 @@ namespace QuestMod
             if (PlayerData.instance == null) return;
             var rt = QuestDataAccess.GetRuntimeData();
             if (rt == null) return;
+            ModifyAllQuests(rt, complete: true);
+        }
+
+        private static (IDictionary rt, object qd) EnsureQuestEntry(string name)
+        {
+            if (PlayerData.instance == null) return (null, null);
+            var rt = QuestDataAccess.GetRuntimeData();
+            if (rt == null) return (null, null);
+
+            if (rt.Contains(name))
+                return (rt, rt[name]);
+
+            var template = GetAnyValue(rt);
+            if (template == null) return (null, null);
+            var qd = QuestDataAccess.SetFields(template, seen: false, accepted: false, completed: false, wasEver: false);
+            rt[name] = qd;
+            QuestModPlugin.LogDebugInfo($"Injected into RuntimeData: {name}");
+            return (rt, qd);
+        }
+
+        private static void ModifyAllQuests(IDictionary rt, bool complete)
+        {
             int count = 0;
             var keys = new List<object>();
             foreach (var key in rt.Keys) keys.Add(key);
 
             foreach (string key in keys)
             {
+                if (!IsChainPrereqMet(key))
+                    continue;
+
                 var qd = rt[key];
-                qd = QuestDataAccess.SetFields(qd, seen: true, accepted: true, completed: true, wasEver: true);
+                bool wasCompleted = QuestDataAccess.IsCompleted(qd);
+                qd = QuestDataAccess.SetFields(qd, seen: true, accepted: true, completed: complete || wasCompleted, wasEver: complete || wasCompleted);
                 rt[key] = qd;
                 count++;
             }
-            QuestModPlugin.Log.LogInfo($"Completed {count} quests");
+            var verb = complete ? "Completed" : "Accepted";
+            QuestModPlugin.Log.LogInfo($"{verb} {count} quests");
         }
 
-        public static bool IsChainStep(string name) => ChainStepNames.Contains(name);
+        public static bool IsChainStep(string name) => QuestRegistry.ChainStepNames.Contains(name);
 
         public static List<ChainInfo> GetChainList()
         {
             var result = new List<ChainInfo>();
             var rt = QuestDataAccess.GetRuntimeData();
 
-            foreach (var kvp in ChainRegistry)
+            foreach (var kvp in QuestRegistry.ChainRegistry)
             {
                 string chainName = kvp.Key;
                 string[] steps = kvp.Value;
@@ -526,7 +352,7 @@ namespace QuestMod
                     }
                 }
 
-                string display = ChainDisplayNames.TryGetValue(chainName, out var d) ? d : chainName;
+                string display = QuestRegistry.ChainDisplayNames.TryGetValue(chainName, out var d) ? d : chainName;
 
                 bool fullyComplete = currentStep == steps.Length - 1
                     && rt != null && rt.Contains(steps[currentStep])
@@ -548,7 +374,7 @@ namespace QuestMod
 
         public static void AdvanceChain(string chainName)
         {
-            if (!ChainRegistry.TryGetValue(chainName, out var steps)) return;
+            if (!QuestRegistry.ChainRegistry.TryGetValue(chainName, out var steps)) return;
             var rt = QuestDataAccess.GetRuntimeData();
             if (rt == null) return;
 
@@ -587,7 +413,7 @@ namespace QuestMod
 
         public static void RewindChain(string chainName)
         {
-            if (!ChainRegistry.TryGetValue(chainName, out var steps)) return;
+            if (!QuestRegistry.ChainRegistry.TryGetValue(chainName, out var steps)) return;
             var rt = QuestDataAccess.GetRuntimeData();
             if (rt == null) return;
 

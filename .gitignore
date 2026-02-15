@@ -4,5 +4,8 @@ obj/
 *.suo
 .vs/
 *.DotSettings.user
-
 dumps/
+SilksongPath.props
+thunderstore/temp/
+thunderstore/dist/
+docs/TODO.md

@@ -13,4 +13,10 @@ namespace QuestMod
     {
         public static bool Prefix() => !QuestModPlugin.QuestItemInvincible.Value;
     }
+
+    [HarmonyPatch(typeof(HeroController), nameof(HeroController.TickDeliveryItems))]
+    public static class TickDeliveryPatch
+    {
+        public static bool Prefix() => !QuestModPlugin.QuestItemInvincible.Value;
+    }
 }

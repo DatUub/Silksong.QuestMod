@@ -1,7 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Reflection;
 using HarmonyLib;
 using UnityEngine;
@@ -21,6 +19,7 @@ namespace QuestMod
     {
         public string QuestName;
         public string QuestTypeName;
+        public int CompletedCount;
         public List<QuestTargetInfo> Targets;
     }
 
@@ -34,49 +33,70 @@ namespace QuestMod
 
         private static FullQuestBase[]? cachedQuests;
 
-        public static readonly string[] Categories = { "Gather" };
 
-        private static readonly Dictionary<string, string> questCategories = new Dictionary<string, string>
+
+        public static int GetMaxCap(string questName, int targetIndex)
         {
-            { "Brolly Get", "Gather" },
-            { "Huntress Quest", "Gather" },
-            { "Shiny Bell Goomba", "Gather" },
-            { "Rock Rollers", "Gather" },
-            { "Pilgrim Rags", "Gather" },
-            { "Fine Pins", "Gather" },
-            { "Song Pilgrim Cloaks", "Gather" },
-            { "Roach Killing", "Gather" },
-            { "Crow Feathers", "Gather" },
-            { "Huntress Quest Runt", "Gather" },
+            if (QuestRegistry.MaxCaps.TryGetValue(questName, out int[] caps) && targetIndex < caps.Length)
+                return caps[targetIndex];
+            return -1;
+        }
 
-            { "Belltown House Mid", "Craftmetal" },
-            { "Belltown House Start", "Craftmetal" },
-            { "Songclave Donation 1", "Craftmetal" },
-            { "Songclave Donation 2", "Craftmetal" },
-            { "Building Materials (Statue)", "Craftmetal" },
-            { "Building Materials (Bridge)", "Craftmetal" },
-            { "Building Materials", "Craftmetal" },
+        public static int ClampCount(string questName, int targetIndex, int value)
+        {
+            if (value < 0) value = 0;
 
-            { "Courier Delivery Mask Maker", "Courier" },
-            { "Courier Delivery Fleatopia", "Courier" },
-            { "Courier Delivery Dustpens Slave", "Courier" },
-            { "Courier Delivery Pilgrims Rest", "Courier" },
-            { "Courier Delivery Bonebottom", "Courier" },
-            { "Courier Delivery Fixer", "Courier" },
-            { "Courier Delivery Songclave", "Courier" },
+            if (QuestModPlugin.DevRemoveLimits.Value)
+                return value;
 
-            { "Extractor Blue Worms", "Misc" },
-            { "Extractor Blue", "Misc" },
-            { "Journal", "Misc" },
-            { "Save the Fleas", "Misc" },
-            { "Destroy Thread Cores", "Misc" },
-            { "Shell Flowers", "Misc" },
-            { "Mossberry Collection 1", "Misc" }
-        };
+            int cap = GetMaxCap(questName, targetIndex);
+            if (cap > 0 && value > cap) value = cap;
+            return value;
+        }
+
+        public static int GetQoLCount(int originalCount)
+        {
+            return (originalCount + 1) / 2;
+        }
+
+        public static void ApplyPresetAll(string preset)
+        {
+            if (!IsInitialized) return;
+            if (cachedQuests == null) CacheQuests();
+            if (cachedQuests == null || countField == null) return;
+
+            foreach (var quest in cachedQuests)
+            {
+                var questName = quest.name ?? "";
+            if (!QuestRegistry.QuestCategories.ContainsKey(questName)) continue;
+                if (!originalCounts.ContainsKey(questName)) continue;
+
+                var orig = originalCounts[questName];
+                for (int i = 0; i < orig.Length; i++)
+                {
+                    int newCount;
+                    switch (preset)
+                    {
+                        case "set1":
+                            newCount = 1;
+                            break;
+                        case "qol":
+                            newCount = GetQoLCount(orig[i]);
+                            break;
+                        default:
+                            newCount = orig[i];
+                            break;
+                    }
+                    SetTargetCount(questName, i, newCount);
+                }
+            }
+
+            QuestModPlugin.LogDebugInfo($"Applied preset '{preset}' to all quests");
+        }
 
         public static string? GetCategory(string questName)
         {
-            if (questCategories.TryGetValue(questName, out string cat))
+            if (QuestRegistry.QuestCategories.TryGetValue(questName, out string cat))
                 return cat;
             return null;
         }
@@ -105,7 +125,7 @@ namespace QuestMod
                     if (f.FieldType.IsArray && f.FieldType.GetElementType()?.Name == "QuestTarget")
                     {
                         targetsBackingField = f;
-                        countField = AccessTools.Field(f.FieldType.GetElementType(), "Count");
+                        countField = ReflectionCache.GetField(f.FieldType.GetElementType(), "Count");
                         QuestModPlugin.Log.LogInfo($"Found targets backing field: {f.Name} on {type.Name}");
                         break;
                     }
@@ -124,7 +144,7 @@ namespace QuestMod
             QuestModPlugin.Log.LogInfo("QuestCompletionOverrides initialized");
         }
 
-        private static Array? GetTargetsArray(FullQuestBase quest)
+        internal static Array GetTargetsArray(FullQuestBase quest)
         {
             return targetsBackingField?.GetValue(quest) as Array;
         }
@@ -151,430 +171,6 @@ namespace QuestMod
             }
         }
 
-        public static string DumpAllTargets()
-        {
-            if (!IsInitialized || countField == null) return null;
-            if (cachedQuests == null) CacheQuests();
-            if (cachedQuests == null) return null;
-
-            var lines = new List<string>();
-            lines.Add("Quest Name | Type | Target Index | Counter | Count");
-            lines.Add("--- | --- | --- | --- | ---");
-
-            var detailLines = new List<string>();
-            detailLines.Add("");
-            detailLines.Add("## Detailed Target Fields");
-            detailLines.Add("");
-
-            foreach (var quest in cachedQuests)
-            {
-                var questName = quest.name ?? "";
-                var typeName = quest.GetType().Name;
-                var targets = quest.Targets;
-                if (targets == null || targets.Count == 0)
-                {
-                    lines.Add($"{questName} | {typeName} | - | - | 0 targets");
-                    continue;
-                }
-
-                for (int i = 0; i < targets.Count; i++)
-                {
-                    var target = targets[i];
-                    var counter = target.Counter?.ToString() ?? "?";
-                    lines.Add($"{questName} | {typeName} | {i} | {counter} | {target.Count}");
-
-                    if (counter == "?")
-                    {
-                        var arr = GetTargetsArray(quest);
-                        if (arr != null && i < arr.Length)
-                        {
-                            var rawTarget = arr.GetValue(i);
-                            var targetType = rawTarget.GetType();
-                            detailLines.Add($"### {questName} [target {i}]");
-                            detailLines.Add($"- **Struct Type:** `{targetType.FullName}`");
-
-                            foreach (var field in AccessTools.GetDeclaredFields(targetType))
-                            {
-                                try
-                                {
-                                    var val = field.GetValue(rawTarget);
-                                    string valStr;
-                                    if (val == null)
-                                        valStr = "null";
-                                    else if (val is UnityEngine.Object uobj)
-                                        valStr = $"{uobj.GetType().Name} \"{uobj.name}\"";
-                                    else
-                                        valStr = val.ToString();
-                                    detailLines.Add($"- `{field.Name}` ({field.FieldType.Name}): {valStr}");
-                                }
-                                catch
-                                {
-                                    detailLines.Add($"- `{field.Name}` ({field.FieldType.Name}): [error reading]");
-                                }
-                            }
-                            detailLines.Add("");
-                        }
-                    }
-                }
-            }
-
-            lines.AddRange(detailLines);
-
-            var path = Path.Combine(Path.GetDirectoryName(typeof(QuestModPlugin).Assembly.Location), "QuestTargetDump.md");
-            File.WriteAllLines(path, lines);
-            QuestModPlugin.Log.LogInfo($"Dumped {cachedQuests.Length} quests to {path}");
-            return path;
-        }
-
-        public static string DumpCompleteTotalGroups()
-        {
-            var groupType = AccessTools.TypeByName("QuestCompleteTotalGroup");
-            if (groupType == null)
-            {
-                QuestModPlugin.Log.LogWarning("QuestCompleteTotalGroup type not found");
-                return null;
-            }
-            QuestModPlugin.Log.LogInfo($"Found QuestCompleteTotalGroup as {groupType.FullName}");
-
-            var findMethod = typeof(Resources).GetMethod("FindObjectsOfTypeAll", new[] { typeof(System.Type) });
-            var allObjects = findMethod.Invoke(null, new object[] { groupType }) as UnityEngine.Object[];
-            if (allObjects == null || allObjects.Length == 0)
-            {
-                QuestModPlugin.Log.LogWarning("No CompleteTotalGroup instances found");
-                return null;
-            }
-
-            QuestModPlugin.Log.LogInfo($"Found {allObjects.Length} CompleteTotalGroup instances");
-
-            var sb = new System.Text.StringBuilder();
-            sb.AppendLine("[");
-
-            for (int g = 0; g < allObjects.Length; g++)
-            {
-                var obj = allObjects[g];
-                sb.AppendLine("  {");
-                sb.AppendLine($"    \"name\": \"{EscapeJson(obj.name)}\",");
-                sb.AppendLine($"    \"type\": \"{obj.GetType().FullName}\",");
-                sb.AppendLine("    \"fields\": {");
-                SerializeFields(sb, obj, obj.GetType(), "      ");
-                sb.AppendLine("    }");
-                sb.Append(g < allObjects.Length - 1 ? "  },\n" : "  }\n");
-            }
-
-            sb.AppendLine("]");
-
-            var path = Path.Combine(Path.GetDirectoryName(typeof(QuestModPlugin).Assembly.Location), "CompleteTotalGroups.json");
-            File.WriteAllText(path, sb.ToString());
-            QuestModPlugin.Log.LogInfo($"Dumped {allObjects.Length} CompleteTotalGroup objects to {path}");
-            return path;
-        }
-
-        public static string DumpQuestAvailability()
-        {
-            var allQuests = Resources.FindObjectsOfTypeAll<FullQuestBase>();
-            if (allQuests.Length == 0)
-            {
-                QuestModPlugin.Log.LogWarning("No FullQuestBase objects found");
-                return null;
-            }
-
-            var sb = new System.Text.StringBuilder();
-            sb.AppendLine("[");
-
-            var fqbType = typeof(FullQuestBase);
-            var f_playerDataTest = AccessTools.Field(fqbType, "playerDataTest");
-            var f_persistentBoolTests = AccessTools.Field(fqbType, "persistentBoolTests");
-            var f_requiredCompleteQuests = AccessTools.Field(fqbType, "requiredCompleteQuests");
-            var f_requiredUnlockedTools = AccessTools.Field(fqbType, "requiredUnlockedTools");
-            var f_requiredCompleteTotalGroups = AccessTools.Field(fqbType, "requiredCompleteTotalGroups");
-            var f_previousQuestStep = AccessTools.Field(fqbType, "previousQuestStep");
-            var f_nextQuestStep = AccessTools.Field(fqbType, "nextQuestStep");
-            var f_markCompleted = AccessTools.Field(fqbType, "markCompleted");
-            var f_cancelIfIncomplete = AccessTools.Field(fqbType, "cancelIfIncomplete");
-            var f_hideIfComplete = AccessTools.Field(fqbType, "hideIfComplete");
-            var f_getTargetCondition = AccessTools.Field(fqbType, "getTargetCondition");
-
-            for (int i = 0; i < allQuests.Length; i++)
-            {
-                var q = allQuests[i];
-                if (string.IsNullOrEmpty(q.name)) continue;
-
-                sb.AppendLine("  {");
-                sb.AppendLine($"    \"name\": \"{EscapeJson(q.name)}\",");
-
-                try { sb.AppendLine($"    \"displayName\": \"{EscapeJson(q.DisplayName.ToString())}\","); }
-                catch { sb.AppendLine("    \"displayName\": \"\","); }
-
-                try { sb.AppendLine($"    \"questType\": \"{q.QuestType}\","); }
-                catch { sb.AppendLine("    \"questType\": \"unknown\","); }
-
-                try { sb.AppendLine($"    \"isAvailable\": {(q.IsAvailable ? "true" : "false")},"); }
-                catch { sb.AppendLine("    \"isAvailable\": null,"); }
-
-                try { sb.AppendLine($"    \"isAccepted\": {(q.IsAccepted ? "true" : "false")},"); }
-                catch { sb.AppendLine("    \"isAccepted\": null,"); }
-
-                try { sb.AppendLine($"    \"isCompleted\": {(q.IsCompleted ? "true" : "false")},"); }
-                catch { sb.AppendLine("    \"isCompleted\": null,"); }
-
-                try { sb.AppendLine($"    \"isHidden\": {(q.IsHidden ? "true" : "false")},"); }
-                catch { sb.AppendLine("    \"isHidden\": null,"); }
-
-                WriteQuestRefField(sb, f_previousQuestStep, q, "previousQuestStep");
-                WriteQuestRefField(sb, f_nextQuestStep, q, "nextQuestStep");
-                WriteQuestArrayField(sb, f_requiredCompleteQuests, q, "requiredCompleteQuests");
-                WriteQuestArrayField(sb, f_markCompleted, q, "markCompleted");
-                WriteQuestArrayField(sb, f_cancelIfIncomplete, q, "cancelIfIncomplete");
-                WriteQuestArrayField(sb, f_hideIfComplete, q, "hideIfComplete");
-
-                try
-                {
-                    var tools = f_requiredUnlockedTools?.GetValue(q) as UnityEngine.Object[];
-                    if (tools != null && tools.Length > 0)
-                    {
-                        sb.Append("    \"requiredUnlockedTools\": [");
-                        for (int t = 0; t < tools.Length; t++)
-                        {
-                            sb.Append($"\"{EscapeJson(tools[t] == null ? "null" : tools[t].name)}\"");
-                            if (t < tools.Length - 1) sb.Append(", ");
-                        }
-                        sb.AppendLine("],");
-                    }
-                    else sb.AppendLine("    \"requiredUnlockedTools\": [],");
-                }
-                catch { sb.AppendLine("    \"requiredUnlockedTools\": [],"); }
-
-                try
-                {
-                    var groups = f_requiredCompleteTotalGroups?.GetValue(q) as UnityEngine.Object[];
-                    if (groups != null && groups.Length > 0)
-                    {
-                        sb.Append("    \"requiredCompleteTotalGroups\": [");
-                        for (int g = 0; g < groups.Length; g++)
-                        {
-                            sb.Append($"\"{EscapeJson(groups[g] == null ? "null" : groups[g].name)}\"");
-                            if (g < groups.Length - 1) sb.Append(", ");
-                        }
-                        sb.AppendLine("],");
-                    }
-                    else sb.AppendLine("    \"requiredCompleteTotalGroups\": [],");
-                }
-                catch { sb.AppendLine("    \"requiredCompleteTotalGroups\": [],"); }
-
-                if (f_playerDataTest != null)
-                {
-                    try
-                    {
-                        var pdt = f_playerDataTest.GetValue(q);
-                        if (pdt != null)
-                        {
-                            sb.AppendLine("    \"playerDataTest\": {");
-                            SerializeFields(sb, pdt, pdt.GetType(), "      ");
-                            sb.AppendLine("    },");
-                        }
-                        else sb.AppendLine("    \"playerDataTest\": null,");
-                    }
-                    catch { sb.AppendLine("    \"playerDataTest\": null,"); }
-                }
-
-                if (f_getTargetCondition != null)
-                {
-                    try
-                    {
-                        var cond = f_getTargetCondition.GetValue(q);
-                        if (cond != null)
-                        {
-                            sb.AppendLine("    \"getTargetCondition\": {");
-                            SerializeFields(sb, cond, cond.GetType(), "      ");
-                            sb.AppendLine("    },");
-                        }
-                        else sb.AppendLine("    \"getTargetCondition\": null,");
-                    }
-                    catch { sb.AppendLine("    \"getTargetCondition\": null,"); }
-                }
-
-                var targets = q.Targets;
-                sb.AppendLine("    \"targets\": [");
-                if (targets != null)
-                {
-                    for (int t = 0; t < targets.Count; t++)
-                    {
-                        var target = targets[t];
-                        sb.Append($"      {{ \"item\": \"{EscapeJson(target.ItemName)}\", \"count\": {target.Count} }}");
-                        sb.AppendLine(t < targets.Count - 1 ? "," : "");
-                    }
-                }
-                sb.AppendLine("    ]");
-
-                sb.AppendLine(i < allQuests.Length - 1 ? "  }," : "  }");
-            }
-
-            sb.AppendLine("]");
-
-            var path = Path.Combine(Path.GetDirectoryName(typeof(QuestModPlugin).Assembly.Location), "QuestAvailability.json");
-            File.WriteAllText(path, sb.ToString());
-            QuestModPlugin.Log.LogInfo($"Dumped {allQuests.Length} quest availability records to {path}");
-            return path;
-        }
-
-        private static void WriteQuestRefField(System.Text.StringBuilder sb, FieldInfo field, FullQuestBase q, string jsonKey)
-        {
-            try
-            {
-                var val = field?.GetValue(q) as FullQuestBase;
-                sb.AppendLine($"    \"{jsonKey}\": {(val == null ? "null" : $"\"{EscapeJson(val.name)}\"")},");
-            }
-            catch { sb.AppendLine($"    \"{jsonKey}\": null,"); }
-        }
-
-        private static void WriteQuestArrayField(System.Text.StringBuilder sb, FieldInfo field, FullQuestBase q, string jsonKey)
-        {
-            try
-            {
-                var arr = field?.GetValue(q) as FullQuestBase[];
-                if (arr != null && arr.Length > 0)
-                {
-                    sb.Append($"    \"{jsonKey}\": [");
-                    for (int j = 0; j < arr.Length; j++)
-                    {
-                        sb.Append($"\"{EscapeJson(arr[j] == null ? "null" : arr[j].name)}\"");
-                        if (j < arr.Length - 1) sb.Append(", ");
-                    }
-                    sb.AppendLine("],");
-                }
-                else sb.AppendLine($"    \"{jsonKey}\": [],");
-            }
-            catch { sb.AppendLine($"    \"{jsonKey}\": [],"); }
-        }
-
-        private static void SerializeFields(System.Text.StringBuilder sb, object obj, System.Type type, string indent)
-        {
-            var fields = AccessTools.GetDeclaredFields(type);
-            for (int i = 0; i < fields.Count; i++)
-            {
-                var field = fields[i];
-                if (field.Name.StartsWith("<")) continue;
-
-                try
-                {
-                    var val = field.GetValue(obj);
-                    var comma = i < fields.Count - 1 ? "," : "";
-                    SerializeValue(sb, field.Name, val, indent, comma);
-                }
-                catch
-                {
-                    sb.AppendLine($"{indent}\"{field.Name}\": \"[error reading]\"{(i < fields.Count - 1 ? "," : "")}");
-                }
-            }
-        }
-
-        private static void SerializeValue(System.Text.StringBuilder sb, string name, object val, string indent, string comma)
-        {
-            if (val == null)
-            {
-                sb.AppendLine($"{indent}\"{name}\": null{comma}");
-                return;
-            }
-
-            if (val is string s)
-            {
-                sb.AppendLine($"{indent}\"{name}\": \"{EscapeJson(s)}\"{comma}");
-                return;
-            }
-
-            if (val is bool b)
-            {
-                sb.AppendLine($"{indent}\"{name}\": {(b ? "true" : "false")}{comma}");
-                return;
-            }
-
-            if (val is int || val is float || val is double || val is long || val is short || val is byte)
-            {
-                sb.AppendLine($"{indent}\"{name}\": {val}{comma}");
-                return;
-            }
-
-            if (val is System.Enum e)
-            {
-                sb.AppendLine($"{indent}\"{name}\": \"{val}\"{comma}");
-                return;
-            }
-
-            if (val is UnityEngine.Object uobj)
-            {
-                sb.AppendLine($"{indent}\"{name}\": \"{uobj.GetType().Name}:{EscapeJson(uobj.name)}\"{comma}");
-                return;
-            }
-
-            if (val is System.Collections.IList list)
-            {
-                sb.AppendLine($"{indent}\"{name}\": [");
-                for (int i = 0; i < list.Count; i++)
-                {
-                    var item = list[i];
-                    var itemComma = i < list.Count - 1 ? "," : "";
-                    if (item is UnityEngine.Object uo)
-                    {
-                        sb.AppendLine($"{indent}  \"{uo.GetType().Name}:{EscapeJson(uo.name)}\"{itemComma}");
-                    }
-                    else if (item != null && !item.GetType().IsPrimitive && item.GetType() != typeof(string))
-                    {
-                        sb.AppendLine($"{indent}  {{");
-                        SerializeFields(sb, item, item.GetType(), indent + "    ");
-                        sb.AppendLine($"{indent}  }}{itemComma}");
-                    }
-                    else
-                    {
-                        sb.AppendLine($"{indent}  {(item == null ? "null" : $"\"{EscapeJson(item.ToString())}\"")}{itemComma}");
-                    }
-                }
-                sb.AppendLine($"{indent}]{comma}");
-                return;
-            }
-
-            if (val is System.Array arr)
-            {
-                sb.AppendLine($"{indent}\"{name}\": [");
-                for (int i = 0; i < arr.Length; i++)
-                {
-                    var item = arr.GetValue(i);
-                    var itemComma = i < arr.Length - 1 ? "," : "";
-                    if (item is UnityEngine.Object uo)
-                    {
-                        sb.AppendLine($"{indent}  \"{uo.GetType().Name}:{EscapeJson(uo.name)}\"{itemComma}");
-                    }
-                    else if (item != null && !item.GetType().IsPrimitive && item.GetType() != typeof(string))
-                    {
-                        sb.AppendLine($"{indent}  {{");
-                        SerializeFields(sb, item, item.GetType(), indent + "    ");
-                        sb.AppendLine($"{indent}  }}{itemComma}");
-                    }
-                    else
-                    {
-                        sb.AppendLine($"{indent}  {(item == null ? "null" : $"\"{EscapeJson(item.ToString())}\"")}{itemComma}");
-                    }
-                }
-                sb.AppendLine($"{indent}]{comma}");
-                return;
-            }
-
-            var valType = val.GetType();
-            if (valType.IsValueType && !valType.IsPrimitive && !valType.IsEnum)
-            {
-                sb.AppendLine($"{indent}\"{name}\": {{");
-                SerializeFields(sb, val, valType, indent + "  ");
-                sb.AppendLine($"{indent}}}{comma}");
-                return;
-            }
-
-            sb.AppendLine($"{indent}\"{name}\": \"{EscapeJson(val.ToString())}\"{comma}");
-        }
-
-        private static string EscapeJson(string s)
-        {
-            if (s == null) return "";
-            return s.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", "\\n").Replace("\r", "\\r").Replace("\t", "\\t");
-        }
 
         public static List<QuestOverrideInfo> GetAllQuestsWithTargets()
         {
@@ -586,7 +182,7 @@ namespace QuestMod
             foreach (var quest in cachedQuests)
             {
                 var questName = quest.name ?? "";
-                if (!questCategories.ContainsKey(questName)) continue;
+                if (!QuestRegistry.QuestCategories.ContainsKey(questName)) continue;
                 if (!QuestModPlugin.IsQuestDiscovered(questName)) continue;
 
                 var targets = quest.Targets;
@@ -596,8 +192,16 @@ namespace QuestMod
                 {
                     QuestName = questName,
                     QuestTypeName = quest.GetType().Name,
+                    CompletedCount = 0,
                     Targets = new List<QuestTargetInfo>()
                 };
+
+                var rt = QuestDataAccess.GetRuntimeData();
+                if (rt != null && rt.Contains(questName))
+                {
+                    var qd = rt[questName];
+                    info.CompletedCount = QuestDataAccess.GetCompletedCount(qd);
+                }
 
                 for (int i = 0; i < targets.Count; i++)
                 {
@@ -632,6 +236,8 @@ namespace QuestMod
             if (cachedQuests == null) CacheQuests();
             if (cachedQuests == null || countField == null) return false;
 
+            newCount = ClampCount(questName, targetIndex, newCount);
+
             foreach (var quest in cachedQuests)
             {
                 if (quest.name != questName) continue;
@@ -662,7 +268,43 @@ namespace QuestMod
                 if (saveData != null)
                     saveData.QuestTargetOverrides[$"{questName}:{targetIndex}"] = newCount;
 
-                QuestModPlugin.Log.LogInfo($"Set {questName} target[{targetIndex}] count to {newCount}");
+                QuestModPlugin.LogDebugInfo($"Set {questName} target[{targetIndex}] count to {newCount}");
+
+                if (QuestRegistry.SharedTargetQuests.TryGetValue(questName, out string linkedQuest))
+                {
+                    foreach (var q in cachedQuests)
+                    {
+                        if (q.name != linkedQuest) continue;
+                        var linkedArr = GetTargetsArray(q);
+                        if (linkedArr != null && targetIndex < linkedArr.Length)
+                        {
+                            var linkedTarget = linkedArr.GetValue(targetIndex);
+                            countField.SetValue(linkedTarget, newCount);
+                            linkedArr.SetValue(linkedTarget, targetIndex);
+
+                            if (!overrideCounts.ContainsKey(linkedQuest))
+                            {
+                                var lCounts = new int[linkedArr.Length];
+                                for (int i = 0; i < linkedArr.Length; i++)
+                                {
+                                    var lt = linkedArr.GetValue(i);
+                                    lCounts[i] = (int)countField.GetValue(lt);
+                                }
+                                overrideCounts[linkedQuest] = lCounts;
+                            }
+                            else
+                            {
+                                overrideCounts[linkedQuest][targetIndex] = newCount;
+                            }
+
+                            var linkedSaveData = QuestModPlugin.Instance.SaveData;
+                            if (linkedSaveData != null)
+                                linkedSaveData.QuestTargetOverrides[$"{linkedQuest}:{targetIndex}"] = newCount;
+                        }
+                        break;
+                    }
+                }
+
                 return true;
             }
 
@@ -689,7 +331,7 @@ namespace QuestMod
                     arr.SetValue(target, i);
                 }
 
-                QuestModPlugin.Log.LogInfo($"Set all {arr.Length} targets for {questName} to {newCount}");
+                QuestModPlugin.LogDebugInfo($"Set all {arr.Length} targets for {questName} to {newCount}");
                 return;
             }
         }
@@ -729,7 +371,7 @@ namespace QuestMod
                         saveData.QuestTargetOverrides.Remove(key);
                 }
 
-                QuestModPlugin.Log.LogInfo($"Reset {questName} to original counts");
+                QuestModPlugin.LogDebugInfo($"Reset {questName} to original counts");
                 return;
             }
         }
@@ -762,27 +404,18 @@ namespace QuestMod
             QuestModPlugin.Log.LogInfo($"Applied {applied} saved quest target overrides");
         }
 
-        public static readonly Dictionary<string, string[]> ChecklistQuests = new Dictionary<string, string[]>
-        {
-            { "Grand Gate Bellshrines", new[] { "The Marrow", "Far Fields", "Greymoor", "Bellhart", "Shellwood" } },
-            { "Flea Games", new[] { "Juggle", "Dodge", "Bounce" } },
-            { "Great Gourmand", new[] { "Mossberry Stew", "Vintage Nectar", "Courier Supplies", "Coral Ingredient", "Pickled Roach Egg" } },
-            { "Mr Mushroom", new[] { "Chapel (Monarch)", "Camp (Black Thread)", "Scorched Field", "Towers (Surgeon)", "Cage (Silken Lie)", "Heart of Frost", "Cradle's Peak" } },
-            { "Soul Snare", new[] { "Churchkeeper", "Bell Hermit", "Swamp Bug", "Silk Snare" } }
-        };
 
-        public static readonly HashSet<string> SequentialQuests = new HashSet<string> { "Mr Mushroom" };
 
         public static bool[] GetChecklistStatus(string questName)
         {
-            if (!ChecklistQuests.ContainsKey(questName)) return new bool[0];
-            if (!IsInitialized || cachedQuests == null) return new bool[ChecklistQuests[questName].Length];
+            if (!QuestRegistry.ChecklistQuests.ContainsKey(questName)) return new bool[0];
+            if (!IsInitialized || cachedQuests == null) return new bool[QuestRegistry.ChecklistQuests[questName].Length];
 
             foreach (var quest in cachedQuests)
             {
                 if (quest.name != questName) continue;
                 var targets = quest.Targets;
-                if (targets == null) return new bool[ChecklistQuests[questName].Length];
+                if (targets == null) return new bool[QuestRegistry.ChecklistQuests[questName].Length];
 
                 var status = new bool[targets.Count];
                 for (int i = 0; i < targets.Count; i++)
@@ -790,16 +423,16 @@ namespace QuestMod
                 return status;
             }
 
-            return new bool[ChecklistQuests[questName].Length];
+            return new bool[QuestRegistry.ChecklistQuests[questName].Length];
         }
 
         public static void ToggleChecklistTarget(string questName, int index, bool done)
         {
             SetTargetCount(questName, index, done ? 0 : 1);
 
-            if (!done && SequentialQuests.Contains(questName))
+            if (!done && QuestRegistry.SequentialQuests.Contains(questName))
             {
-                var labels = ChecklistQuests[questName];
+                var labels = QuestRegistry.ChecklistQuests[questName];
                 for (int i = index + 1; i < labels.Length; i++)
                     SetTargetCount(questName, i, 1);
             }

@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using HutongGames.PlayMaker;
 using Silksong.UnityHelper.Extensions;
 using UnityEngine;
@@ -11,7 +10,6 @@ namespace QuestMod
         public static void Initialize()
         {
             SceneManager.sceneLoaded += OnSceneLoaded;
-            QuestModPlugin.Log.LogInfo("SilverBellPatch: Registered sceneLoaded hook");
         }
 
         private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
@@ -19,15 +17,14 @@ namespace QuestMod
             if (string.IsNullOrEmpty(scene.name))
                 return;
 
-            QuestModPlugin.Instance.InvokeAfterSeconds(() => PatchDroppers(), 1f);
+            QuestModPlugin.Instance.InvokeAfterSeconds(() => PatchDroppers(), 0.5f);
+            QuestModPlugin.Instance.InvokeAfterSeconds(() => PatchDroppers(), 2f);
         }
 
         private static void PatchDroppers()
         {
             if (!QuestModPlugin.GuaranteedSilverBells.Value)
                 return;
-
-            int patched = 0;
 
             foreach (var fsm in Object.FindObjectsByType<PlayMakerFSM>(FindObjectsInactive.Include, FindObjectsSortMode.None))
             {
@@ -37,61 +34,31 @@ namespace QuestMod
                 if (fsm.FsmName != "Control")
                     continue;
 
-                if (PatchDropperFSM(fsm))
-                    patched++;
+                PatchDropperFSM(fsm);
             }
-
-            if (patched > 0)
-                QuestModPlugin.Log.LogInfo($"SilverBellPatch: Patched {patched} Quest Bell Droppers for guaranteed silver");
         }
 
-        private static bool PatchDropperFSM(PlayMakerFSM fsm)
+        private static void PatchDropperFSM(PlayMakerFSM fsm)
         {
             if (fsm.Fsm == null || fsm.FsmStates == null)
-                return false;
+                return;
 
-            FsmState dropType = null;
             foreach (var state in fsm.FsmStates)
             {
-                if (state != null && state.Name == "Drop Type")
-                {
-                    dropType = state;
-                    break;
-                }
-            }
-
-            if (dropType == null || dropType.Actions == null)
-                return false;
-
-            var keepActions = new List<FsmStateAction>();
-            foreach (var action in dropType.Actions)
-            {
-                if (action == null)
+                if (state == null || state.Name != "Drop Type")
                     continue;
 
-                string typeName = action.GetType().Name;
-                if (typeName == "SendEvent")
+                if (state.Transitions == null)
+                    return;
+
+                foreach (var transition in state.Transitions)
                 {
-                    keepActions.Add(action);
-                    QuestModPlugin.Log.LogInfo($"SilverBellPatch: Keeping {typeName} on {fsm.gameObject.name}");
+                    if (transition.EventName == "STANDARD")
+                        transition.ToState = "Silver";
                 }
-                else
-                {
-                    QuestModPlugin.Log.LogInfo($"SilverBellPatch: Removing {typeName} from {fsm.gameObject.name}");
-                }
+
+                return;
             }
-
-            dropType.Actions = keepActions.ToArray();
-
-            var silverTransition = new List<FsmTransition>();
-            foreach (var t in dropType.Transitions)
-            {
-                if (t.EventName == "SILVER")
-                    silverTransition.Add(t);
-            }
-            dropType.Transitions = silverTransition.ToArray();
-
-            return true;
         }
     }
 }

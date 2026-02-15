@@ -1,7 +1,7 @@
 using System.Collections.Generic;
+using System.Reflection;
 using HutongGames.PlayMaker;
 using QuestPlaymakerActions;
-using Silksong.FsmUtil;
 using Silksong.UnityHelper.Extensions;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -11,6 +11,20 @@ namespace QuestMod
     public static class QuestStateHooks
     {
         private static readonly HashSet<string> PatchedFSMs = new();
+
+        private static readonly HashSet<string> WhitelistedObjects = new(System.StringComparer.OrdinalIgnoreCase)
+        {
+            "Courier",
+            "Tipp",
+            "Mapper",
+            "Leader",
+            "Quest Board",
+            "QuestBoard",
+            "Wishwall",
+            "Sherma",
+            "Fixer",
+            "Caretaker",
+        };
 
         public static void Initialize()
         {
@@ -23,16 +37,18 @@ namespace QuestMod
             if (string.IsNullOrEmpty(scene.name) || scene.name == "Menu_Title")
                 return;
 
-            QuestModPlugin.Log.LogDebug($"Scene loaded: {scene.name}");
-            
-            PatchAllFSMs();
+            QuestModPlugin.SyncFromSaveData();
+            QuestModPlugin.LogDebugInfo($"Scene loaded: {scene.name}");
+
+            PatchedFSMs.Clear();
+            PatchWhitelistedFSMs();
             RefreshQuestBoards();
-            
+
             QuestModPlugin.Instance.InvokeAfterSeconds(() =>
             {
-                QuestModPlugin.Log.LogDebug("Delayed re-patch running...");
+                QuestModPlugin.LogDebugInfo("Delayed re-patch running...");
                 PatchedFSMs.Clear();
-                PatchAllFSMs();
+                PatchWhitelistedFSMs();
                 RefreshQuestBoards();
 
                 if (QuestModPlugin.AllQuestsAccepted)
@@ -45,28 +61,136 @@ namespace QuestMod
             }, 0.5f);
         }
 
-        private static void PatchAllFSMs()
+        private static bool IsWhitelisted(GameObject go)
+        {
+            var name = go.name;
+            foreach (var entry in WhitelistedObjects)
+            {
+                if (name.IndexOf(entry, System.StringComparison.OrdinalIgnoreCase) >= 0)
+                    return true;
+            }
+
+            var parent = go.transform.parent;
+            if (parent != null)
+            {
+                var parentName = parent.gameObject.name;
+                foreach (var entry in WhitelistedObjects)
+                {
+                    if (parentName.IndexOf(entry, System.StringComparison.OrdinalIgnoreCase) >= 0)
+                        return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static void PatchWhitelistedFSMs()
         {
             if (!QuestModPlugin.AllQuestsAvailable)
                 return;
 
-            var fsms = UnityEngine.Object.FindObjectsByType<PlayMakerFSM>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            var fsms = Object.FindObjectsByType<PlayMakerFSM>(FindObjectsInactive.Include, FindObjectsSortMode.None);
             foreach (var fsm in fsms)
             {
+                if (fsm == null || fsm.FsmStates == null)
+                    continue;
+
+                if (!IsWhitelisted(fsm.gameObject))
+                    continue;
+
+                var fsmKey = $"{fsm.gameObject.name}/{fsm.FsmName}";
+                if (PatchedFSMs.Contains(fsmKey))
+                    continue;
+
                 try
                 {
-                    PatchQuestStateFSM(fsm);
+                    PatchQuestStateFSM(fsm, fsmKey);
                 }
                 catch (System.Exception ex)
                 {
-                    QuestModPlugin.Log.LogDebug($"Error patching FSM: {ex.Message}");
+                    QuestModPlugin.Log.LogDebug($"Error patching FSM {fsmKey}: {ex.Message}");
                 }
+            }
+        }
+
+        private static void PatchQuestStateFSM(PlayMakerFSM fsm, string fsmKey)
+        {
+            bool patched = false;
+
+            foreach (var state in fsm.FsmStates)
+            {
+                if (state.Actions == null) continue;
+
+                foreach (var action in state.Actions)
+                {
+                    if (action is CheckQuestStateV2 checkV2)
+                    {
+                        PatchCheckAction(checkV2, state.Name, fsmKey, "V2");
+                        patched = true;
+                    }
+                    else if (action.GetType().Name == "CheckQuestState")
+                    {
+                        PatchCheckActionV1(action, state.Name, fsmKey);
+                        patched = true;
+                    }
+                }
+            }
+
+            if (patched)
+                PatchedFSMs.Add(fsmKey);
+        }
+
+        private static void PatchCheckAction(CheckQuestStateV2 checkAction, string stateName, string fsmKey, string version)
+        {
+            try
+            {
+                var completedEvent = checkAction.CompletedEvent;
+                if (completedEvent == null)
+                {
+                    QuestModPlugin.Log.LogDebug($"  {fsmKey}/{stateName} ({version}): CompletedEvent is null, skipping");
+                    return;
+                }
+
+                checkAction.NotTrackedEvent = completedEvent;
+                checkAction.IncompleteEvent = completedEvent;
+                QuestModPlugin.LogDebugInfo($"  {fsmKey}/{stateName} ({version}): Redirected → CompletedEvent");
+            }
+            catch (System.Exception ex)
+            {
+                QuestModPlugin.Log.LogDebug($"  {fsmKey}/{stateName} ({version}): Patch failed - {ex.Message}");
+            }
+        }
+
+        private static void PatchCheckActionV1(FsmStateAction action, string stateName, string fsmKey)
+        {
+            try
+            {
+                var type = action.GetType();
+                var notTrackedField = type.GetField("NotTrackedEvent", BindingFlags.Public | BindingFlags.Instance);
+                var incompleteField = type.GetField("IncompleteEvent", BindingFlags.Public | BindingFlags.Instance);
+                var completedField = type.GetField("CompletedEvent", BindingFlags.Public | BindingFlags.Instance);
+
+                if (completedField == null) return;
+
+                var completedEvent = completedField.GetValue(action);
+                if (completedEvent == null) return;
+
+                if (notTrackedField != null)
+                    notTrackedField.SetValue(action, completedEvent);
+                if (incompleteField != null)
+                    incompleteField.SetValue(action, completedEvent);
+
+                QuestModPlugin.LogDebugInfo($"  {fsmKey}/{stateName} (V1): Redirected → CompletedEvent");
+            }
+            catch (System.Exception ex)
+            {
+                QuestModPlugin.Log.LogDebug($"  {fsmKey}/{stateName} (V1): Patch failed - {ex.Message}");
             }
         }
 
         private static void RefreshQuestBoards()
         {
-            var allObjects = UnityEngine.Object.FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            var allObjects = Object.FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Include, FindObjectsSortMode.None);
             foreach (var obj in allObjects)
             {
                 if (obj.GetType().Name == "QuestBoardInteractable")
@@ -77,7 +201,7 @@ namespace QuestMod
                         if (refreshMethod != null)
                         {
                             refreshMethod.Invoke(obj, null);
-                            QuestModPlugin.Log.LogInfo($"Refreshed quest board: {obj.gameObject.name}");
+                            QuestModPlugin.LogDebugInfo($"Refreshed quest board: {obj.gameObject.name}");
                         }
                     }
                     catch (System.Exception ex)
@@ -85,146 +209,6 @@ namespace QuestMod
                         QuestModPlugin.Log.LogDebug($"Failed to refresh quest board: {ex.Message}");
                     }
                 }
-            }
-        }
-
-        private static void PatchQuestStateFSM(PlayMakerFSM fsm)
-        {
-            if (fsm == null || fsm.Fsm == null || !fsm.Fsm.Initialized || fsm.FsmStates == null)
-                return;
-
-            string fsmKey = $"{fsm.gameObject.name}/{fsm.FsmName}";
-            if (PatchedFSMs.Contains(fsmKey))
-                return;
-
-            bool foundQuestAction = false;
-
-            foreach (var state in fsm.FsmStates)
-            {
-                if (state == null)
-                    continue;
-
-                // V2 actions via FsmUtil
-                var v2Actions = FsmUtil.GetActionsOfType<CheckQuestStateV2>(fsm, state.Name);
-                foreach (var checkActionV2 in v2Actions)
-                {
-                    foundQuestAction = true;
-                    PatchCheckQuestStateV2(state, checkActionV2);
-                }
-
-                // V1 actions via FsmUtil
-                var v1Actions = FsmUtil.GetActionsOfType<CheckQuestState>(fsm, state.Name);
-                foreach (var checkActionV1 in v1Actions)
-                {
-                    foundQuestAction = true;
-                    PatchCheckQuestStateV1(state, checkActionV1);
-                }
-            }
-
-            if (foundQuestAction)
-            {
-                PatchedFSMs.Add(fsmKey);
-                QuestModPlugin.Log.LogInfo($"Patched quest FSM: {fsmKey}");
-            }
-            else
-            {
-                LogFsmActionTypes(fsm, fsmKey);
-            }
-        }
-
-        private static void PatchCheckQuestStateV2(FsmState state, CheckQuestStateV2 checkAction)
-        {
-            if (checkAction == null)
-                return;
-
-            try
-            {
-                var completedEvent = checkAction.CompletedEvent;
-
-                if (completedEvent != null)
-                {
-                    QuestModPlugin.Log.LogInfo($"  {state.Name}: Redirecting NotTrackedEvent -> CompletedEvent");
-                    checkAction.NotTrackedEvent = completedEvent;
-                    checkAction.IncompleteEvent = completedEvent;
-                }
-                else
-                {
-                    QuestModPlugin.Log.LogWarning($"  {state.Name}: CompletedEvent is null");
-                }
-            }
-            catch (System.Exception ex)
-            {
-                QuestModPlugin.Log.LogWarning($"  {state.Name}: Patch failed - {ex.Message}");
-            }
-        }
-
-        private static void PatchCheckQuestStateV1(FsmState state, CheckQuestState action)
-        {
-            try
-            {
-                var completedEvent = action.CompletedEvent;
-
-                if (completedEvent != null)
-                {
-                    QuestModPlugin.Log.LogInfo($"  {state.Name} (V1): Redirecting NotTrackedEvent -> CompletedEvent");
-                    action.NotTrackedEvent = completedEvent;
-                }
-                else
-                {
-                    QuestModPlugin.Log.LogWarning($"  {state.Name} (V1): CompletedEvent is null");
-                }
-            }
-            catch (System.Exception ex)
-            {
-                QuestModPlugin.Log.LogWarning($"  {state.Name} (V1): Patch failed - {ex.Message}");
-            }
-        }
-
-        private static readonly HashSet<string> LoggedNpcFsms = new();
-        private static readonly HashSet<string> InterestingActionTypes = new()
-        {
-            "PlayerDataBoolTest",
-            "GetPlayerDataBool",
-            "BoolTest",
-            "IntCompare",
-            "StringCompare",
-            "CheckQuestState",
-            "ActivateGameObject",
-            "SetActive"
-        };
-
-        private static void LogFsmActionTypes(PlayMakerFSM fsm, string fsmKey)
-        {
-            if (LoggedNpcFsms.Contains(fsmKey))
-                return;
-            
-            bool hasInterestingAction = false;
-            List<string> actionList = new();
-
-            foreach (var state in fsm.FsmStates)
-            {
-                if (state == null || state.Actions == null)
-                    continue;
-
-                foreach (var action in state.Actions)
-                {
-                    if (action == null)
-                        continue;
-
-                    string typeName = action.GetType().Name;
-                    if (InterestingActionTypes.Contains(typeName))
-                    {
-                        hasInterestingAction = true;
-                        if (!actionList.Contains(typeName))
-                            actionList.Add(typeName);
-                    }
-                }
-            }
-
-            if (hasInterestingAction)
-            {
-                LoggedNpcFsms.Add(fsmKey);
-                QuestModPlugin.Log.LogDebug($"Interesting FSM: {fsmKey} - Actions: {string.Join(", ", actionList)}");
             }
         }
     }
@@ -240,9 +224,12 @@ namespace QuestMod
             if (!QuestModPlugin.IsQuestDiscovered(__instance.name))
                 return;
 
+            if (!QuestAcceptance.IsChainPrereqMet(__instance.name))
+                return;
+
             if (!__result)
             {
-                QuestModPlugin.Log.LogDebug($"IsAvailable override: {__instance.name} was False, returning True");
+                QuestModPlugin.LogDebugInfo($"IsAvailable override: {__instance.name} was False, returning True");
                 __result = true;
             }
         }

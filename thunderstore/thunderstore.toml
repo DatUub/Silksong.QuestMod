@@ -1,0 +1,30 @@
+[config]
+schemaVersion = "0.0.1"
+
+[package]
+namespace = "DatUub"
+description = "Quest management mod for Silksong — accept, complete, and customize quest targets with a full debug GUI."
+websiteUrl = "https://github.com/DatUub/Silksong.QuestMod"
+containsNsfwContent = false
+
+[package.dependencies]
+BepInEx-BepInExPack_Silksong = "5.4.2304"
+silksong_modding-DataManager = "0.1.0"
+silksong_modding-FsmUtil = "0.1.0"
+silksong_modding-UnityHelper = "0.1.0"
+
+[build]
+icon = "./icon.png"
+readme = "../README.md"
+outdir = "./dist"
+
+[[build.copy]]
+source = "./temp"
+target = "/"
+
+[publish]
+repository = "https://thunderstore.io"
+communities = [ "hollow-knight-silksong" ]
+
+[publish.categories]
+hollow-knight-silksong = [ "mods" ]

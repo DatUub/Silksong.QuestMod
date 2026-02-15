@@ -3,18 +3,18 @@
   <Import Condition="Exists('SilksongPath.props')" Project="SilksongPath.props" />
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.1</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <EnableNETAnalyzers>True</EnableNETAnalyzers>
     <AnalysisMode>recommended</AnalysisMode>
     <NoWarn>$(NoWarn);MSB3270</NoWarn>
+    <RestorePackagesWithLockFile>True</RestorePackagesWithLockFile>
+    <RestoreLockedMode Condition="'$(CI)' == 'true'">True</RestoreLockedMode>
+    <PathMap Condition="'$(Configuration)' == 'Release'">$(MSBuildProjectDirectory)=/</PathMap>
   </PropertyGroup>
 
-  <PropertyGroup>
-    <AssemblyTitle>QuestMod</AssemblyTitle>
-    <Version>0.1.0</Version>
-  </PropertyGroup>
+
 
   <ItemGroup>
     <PackageReference Include="BepInEx.Analyzers" Version="1.0.8" PrivateAssets="all" />
@@ -41,6 +41,11 @@
     </Reference>
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Remove="thunderstore/temp;thunderstore/dist" />
+    <EmbeddedResource Include="Data\QuestCapabilities.json" />
+  </ItemGroup>
+
   <Target Name="CopyMod" AfterTargets="PostBuildEvent" Condition="'$(SilksongFolder)' != ''">
       <ItemGroup>
           <Binaries Include="$(TargetPath)" />
@@ -48,5 +53,16 @@
       </ItemGroup>
 
       <Copy SourceFiles="@(Binaries)" DestinationFolder="$(SilksongFolder)/BepInEx/plugins/QuestMod" />
+  </Target>
+
+  <Target Name="ThunderstorePack" DependsOnTargets="Build">
+      <PropertyGroup>
+          <ThunderstoreDir>$(ProjectDir)/thunderstore</ThunderstoreDir>
+      </PropertyGroup>
+      <RemoveDir Directories="$(ThunderstoreDir)/temp;$(ThunderstoreDir)/dist" />
+      <MakeDir Directories="$(ThunderstoreDir)/temp/plugins/QuestMod" />
+      <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ThunderstoreDir)/temp/plugins/QuestMod" />
+      <Exec Command="dotnet tool restore" />
+      <Exec Command="dotnet tcli build --config-path &quot;$(ThunderstoreDir)/thunderstore.toml&quot; --package-name &quot;$(AssemblyTitle)&quot; --package-version $(Version)" />
   </Target>
 </Project>

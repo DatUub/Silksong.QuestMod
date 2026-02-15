@@ -1,0 +1,134 @@
+name: Build & Publish
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+    inputs:
+      force_thunderstore:
+        description: Force re-publishing to Thunderstore
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      allow-release: 'false'
+      is-new-version: ${{ !fromJSON(steps.needs-release.outputs.exists || 'true') }}
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+
+    - name: Restore
+      run: dotnet restore
+
+    - name: Build
+      run: dotnet build -c Release --no-restore
+
+    - name: Prepare Thunderstore Package
+      run: dotnet build -c Release -t:ThunderstorePack --no-restore
+
+    - name: Get Version
+      id: version
+      run: |-
+        VERSION=$(dotnet build QuestMod.csproj -getProperty:Version)
+        echo "Version is $VERSION"
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+    - name: Upload Package Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: thunderstore-package
+        path: thunderstore/dist/*.zip
+
+    - name: Check if release needed
+      id: needs-release
+      uses: mukunku/tag-exists-action@v1.7.0
+      if: github.event_name == 'push'
+      with:
+        tag: v${{ steps.version.outputs.version }}
+
+  release-thunderstore:
+    needs:
+      - build
+      - secret-check
+    runs-on: ubuntu-latest
+    if: |
+      needs.secret-check.outputs.has-thunderstore-secret == 'true' &&
+      (
+        (
+          github.event_name == 'push' &&
+          needs.build.outputs.allow-release == 'true' &&
+          needs.build.outputs.is-new-version == 'true'
+        ) ||
+        (
+          github.event_name == 'workflow_dispatch' &&
+          github.event.inputs.force_thunderstore == 'true'
+        )
+      )
+    env:
+      THUNDERSTORE_API_KEY: ${{ secrets.THUNDERSTORE_API_KEY }}
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 10.x
+    - name: Restore tools
+      run: dotnet tool restore
+    - name: Download artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: thunderstore-package
+        path: thunderstore/dist
+    - name: Publish to Thunderstore
+      run: |-
+        dotnet tcli publish \
+          --config-path thunderstore/thunderstore.toml \
+          --file thunderstore/dist/*.zip \
+          --token $THUNDERSTORE_API_KEY
+
+  release-github:
+    needs:
+      - build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && needs.build.outputs.allow-release == 'true' && needs.build.outputs.is-new-version == 'true'
+
+    steps:
+    - name: Download artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: thunderstore-package
+        path: thunderstore/dist
+    - name: Release
+      uses: softprops/action-gh-release@v2
+      with:
+        draft: false
+        generate_release_notes: true
+        fail_on_unmatched_files: true
+        tag_name: v${{ needs.build.outputs.version }}
+        files: |
+          thunderstore/dist/*.zip
+
+  secret-check:
+    runs-on: ubuntu-latest
+    outputs:
+      has-thunderstore-secret: ${{ secrets.THUNDERSTORE_API_KEY != '' }}
+    steps:
+      - run: echo no-op
