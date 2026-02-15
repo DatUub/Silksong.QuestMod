@@ -27,7 +27,7 @@ jobs:
       is-new-version: ${{ !fromJSON(steps.needs-release.outputs.exists || 'true') }}
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
@@ -85,7 +85,7 @@ jobs:
       THUNDERSTORE_API_KEY: ${{ secrets.THUNDERSTORE_API_KEY }}
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
