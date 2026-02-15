@@ -4,8 +4,9 @@ updates:
   - package-ecosystem: "nuget"
     directory: "/"
     schedule:
-      interval: "weekly"
-      day: "monday"
+      interval: "daily"
+      time: "04:00"
+      timezone: "America/New_York"
     open-pull-requests-limit: 10
     groups:
       silksong-packages:
@@ -28,6 +29,7 @@ updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "weekly"
-      day: "monday"
+      interval: "daily"
+      time: "04:00"
+      timezone: "America/New_York"
     open-pull-requests-limit: 5
