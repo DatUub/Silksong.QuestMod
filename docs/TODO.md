@@ -2,13 +2,6 @@
 
 ### Release
 
-- [x] Set up issue labels (bug, enhancement, all-wishes-mode, quest-customization, delivery-system, silk-soul, gui, itemchanger)
-- [x] Create GitHub issues for known bugs (#5-#8):
-    * Plasmium quests uncompletable without Needle Phial in All Wishes Mode
-    * Shakra not appearing with Trail's End in All Wishes Mode
-    * Junilana missing NPC behavior in All Wishes Mode
-    * Mr Mushroom not spawning at later locations in All Wishes Mode
-- [ ] Add `THUNDERSTORE_API_KEY` secret to GitHub repo
 - [ ] Flip `allow-release` to `'true'` in `build-publish.yml`
 - [ ] Announce in the modding Discord server
 
