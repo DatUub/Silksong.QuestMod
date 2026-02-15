@@ -1,0 +1,33 @@
+version: 2
+updates:
+  # Monitor NuGet package dependencies
+  - package-ecosystem: "nuget"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 10
+    groups:
+      silksong-packages:
+        patterns:
+          - "Silksong.*"
+      bepinex-packages:
+        patterns:
+          - "BepInEx.*"
+          - "Hamunii.BepInEx.*"
+      system-packages:
+        patterns:
+          - "System.*"
+          - "Microsoft.*"
+      harmony-packages:
+        patterns:
+          - "HarmonyX"
+          - "MonoMod.*"
+
+  # Monitor GitHub Actions versions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
