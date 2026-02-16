@@ -62,8 +62,8 @@ namespace QuestMod
             var key = (type, name);
             if (memberCache.TryGetValue(key, out var cached)) return cached;
 
-            MemberInfo member = (MemberInfo)AccessTools.Property(type, name)
-                             ?? AccessTools.Field(type, name);
+            MemberInfo member = (MemberInfo)AccessTools.Field(type, name)
+                             ?? AccessTools.Property(type, name);
             if (member == null) WarnOnce($"Member '{name}' not found on {type.Name}");
             memberCache[key] = member;
             return member;
