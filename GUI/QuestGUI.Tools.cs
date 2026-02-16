@@ -58,12 +58,12 @@ namespace QuestMod
 
             bool allAvail = QuestModPlugin.AllQuestsAvailable;
             bool newAllAvail = GUILayout.Toggle(allAvail,
-                new GUIContent("All Quests Available", "Bypasses act/chain prerequisites for this save. Mutually exclusive with All Quests Accepted."));
+                new GUIContent("All Quests Available", "Bypasses act/chain prerequisites for this save."));
             if (newAllAvail != allAvail) QuestModPlugin.SetAllQuestsAvailable(newAllAvail);
 
             bool allAccepted = QuestModPlugin.AllQuestsAccepted;
             bool newAllAccepted = GUILayout.Toggle(allAccepted,
-                new GUIContent("All Quests Accepted", "Auto-inject and accept every quest each scene load. Mutually exclusive with All Quests Available."));
+                new GUIContent("All Quests Accepted", "Auto-inject and accept every quest each scene load."));
             if (newAllAccepted != allAccepted) QuestModPlugin.SetAllQuestsAccepted(newAllAccepted);
 
             GUILayout.Space(10);

@@ -16,7 +16,18 @@ namespace QuestMod
         internal static ManualLogSource Log { get; private set; } = null!;
         internal static QuestModPlugin Instance { get; private set; } = null!;
 
-        public QuestModSaveData? SaveData { get; set; } = new();
+        private QuestModSaveData _saveData = new();
+        public QuestModSaveData? SaveData
+        {
+            get => _saveData;
+            set
+            {
+                _saveData = value ?? new();
+                AllQuestsAvailable = _saveData.AllQuestsAvailable;
+                AllQuestsAccepted = _saveData.AllQuestsAccepted;
+                Log?.LogInfo($"SaveData loaded: Available={AllQuestsAvailable}, Accepted={AllQuestsAccepted}");
+            }
+        }
 
         public static bool AllQuestsAvailable { get; private set; }
         public static bool AllQuestsAccepted { get; private set; }
@@ -24,14 +35,12 @@ namespace QuestMod
         public static void SetAllQuestsAvailable(bool value)
         {
             AllQuestsAvailable = value;
-            if (value) AllQuestsAccepted = false;
             SyncToSaveData();
         }
 
         public static void SetAllQuestsAccepted(bool value)
         {
             AllQuestsAccepted = value;
-            if (value) AllQuestsAvailable = false;
             SyncToSaveData();
         }
 
@@ -41,15 +50,17 @@ namespace QuestMod
             if (data == null) return;
             AllQuestsAvailable = data.AllQuestsAvailable;
             AllQuestsAccepted = data.AllQuestsAccepted;
-            LogDebugInfo($"Loaded from save: AllQuestsAvailable={AllQuestsAvailable}, AllQuestsAccepted={AllQuestsAccepted}");
+            LogDebugInfo($"SyncFromSave: Available={AllQuestsAvailable}, Accepted={AllQuestsAccepted}");
         }
 
         private static void SyncToSaveData()
         {
+            if (Instance == null) return;
             var data = Instance.SaveData;
             if (data == null) return;
             data.AllQuestsAvailable = AllQuestsAvailable;
             data.AllQuestsAccepted = AllQuestsAccepted;
+            LogDebugInfo($"SyncToSave: Available={AllQuestsAvailable}, Accepted={AllQuestsAccepted}");
         }
         public static ConfigEntry<bool> EnableCompletionOverrides { get; private set; } = null!;
         public static ConfigEntry<bool> OnlyDiscoveredQuests { get; private set; } = null!;
@@ -90,7 +101,7 @@ namespace QuestMod
                     AllQuestsAvailable = false;
                     AllQuestsAccepted = false;
                     SilkSoulOverrides.Reset();
-                    Log.LogInfo("Returned to title — AllQuests mode reset");
+                    Log.LogInfo("Returned to title — mode reset");
                 }
             };
 

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Reflection;
 using HutongGames.PlayMaker;
+using HutongGames.PlayMaker.Actions;
 using QuestPlaymakerActions;
 using Silksong.UnityHelper.Extensions;
 using UnityEngine;
@@ -41,15 +42,20 @@ namespace QuestMod
             QuestModPlugin.LogDebugInfo($"Scene loaded: {scene.name}");
 
             PatchedFSMs.Clear();
-            PatchWhitelistedFSMs();
+            PatchAllQuestFSMs();
+            SetNpcSpawnFlags();
+            ActivateQuestBoards();
             RefreshQuestBoards();
 
             QuestModPlugin.Instance.InvokeAfterSeconds(() =>
             {
                 QuestModPlugin.LogDebugInfo("Delayed re-patch running...");
                 PatchedFSMs.Clear();
-                PatchWhitelistedFSMs();
+                PatchAllQuestFSMs();
+                SetNpcSpawnFlags();
+                ActivateQuestBoards();
                 RefreshQuestBoards();
+                DumpNpcDiagnostics();
 
                 if (QuestModPlugin.AllQuestsAccepted)
                 {
@@ -84,7 +90,7 @@ namespace QuestMod
             return false;
         }
 
-        private static void PatchWhitelistedFSMs()
+        private static void PatchAllQuestFSMs()
         {
             if (!QuestModPlugin.AllQuestsAvailable)
                 return;
@@ -95,7 +101,7 @@ namespace QuestMod
                 if (fsm == null || fsm.FsmStates == null)
                     continue;
 
-                if (!IsWhitelisted(fsm.gameObject))
+                if (fsm.gameObject.GetComponent<SceneAdditiveLoadConditional>() != null)
                     continue;
 
                 var fsmKey = $"{fsm.gameObject.name}/{fsm.FsmName}";
@@ -116,6 +122,7 @@ namespace QuestMod
         private static void PatchQuestStateFSM(PlayMakerFSM fsm, string fsmKey)
         {
             bool patched = false;
+            bool whitelisted = IsWhitelisted(fsm.gameObject);
 
             foreach (var state in fsm.FsmStates)
             {
@@ -123,14 +130,24 @@ namespace QuestMod
 
                 foreach (var action in state.Actions)
                 {
-                    if (action is CheckQuestStateV2 checkV2)
+                    if (whitelisted && action is CheckQuestStateV2 checkV2)
                     {
                         PatchCheckAction(checkV2, state.Name, fsmKey, "V2");
                         patched = true;
                     }
-                    else if (action.GetType().Name == "CheckQuestState")
+                    else if (whitelisted && action.GetType().Name == "CheckQuestState")
                     {
                         PatchCheckActionV1(action, state.Name, fsmKey);
+                        patched = true;
+                    }
+                    else if (action is PlayerDataBoolTest pdBoolTest)
+                    {
+                        PatchPlayerDataBoolTest(pdBoolTest, state.Name, fsmKey);
+                        patched = true;
+                    }
+                    else if (action is BoolTest boolTest)
+                    {
+                        PatchBoolTest(boolTest, state.Name, fsmKey);
                         patched = true;
                     }
                 }
@@ -188,6 +205,112 @@ namespace QuestMod
             }
         }
 
+        private static void PatchPlayerDataBoolTest(PlayerDataBoolTest boolTest, string stateName, string fsmKey)
+        {
+            try
+            {
+                var varName = boolTest.boolName != null ? boolTest.boolName.Value : null;
+                if (string.IsNullOrEmpty(varName) || !NpcSpawnFlags.Contains(varName))
+                    return;
+
+                var trueEvent = boolTest.isTrue;
+                if (trueEvent == null)
+                    return;
+
+                if (boolTest.isFalse != null)
+                {
+                    boolTest.isFalse = trueEvent;
+                    QuestModPlugin.LogDebugInfo($"  {fsmKey}/{stateName} (PDTest '{varName}'): Redirected isFalse → isTrue");
+                }
+            }
+            catch (System.Exception ex)
+            {
+                QuestModPlugin.Log.LogDebug($"  {fsmKey}/{stateName} (PDTest): Patch failed - {ex.Message}");
+            }
+        }
+
+        private static void PatchBoolTest(BoolTest boolTest, string stateName, string fsmKey)
+        {
+            try
+            {
+                var varName = boolTest.boolVariable != null ? boolTest.boolVariable.Name : null;
+                if (string.IsNullOrEmpty(varName) || !NpcSpawnFlags.Contains(varName))
+                    return;
+
+                var trueEvent = boolTest.isTrue;
+                if (trueEvent == null)
+                    return;
+
+                if (boolTest.isFalse != null)
+                {
+                    boolTest.isFalse = trueEvent;
+                    QuestModPlugin.LogDebugInfo($"  {fsmKey}/{stateName} (BoolTest '{varName}'): Redirected isFalse → isTrue");
+                }
+            }
+            catch (System.Exception ex)
+            {
+                QuestModPlugin.Log.LogDebug($"  {fsmKey}/{stateName} (BoolTest): Patch failed - {ex.Message}");
+            }
+        }
+
+        private static readonly HashSet<string> NpcSpawnFlags = new HashSet<string>
+        {
+            "metMapper",
+            "MapperAppearInBellhart",
+            "metTipp",
+            "hasMarker_a",
+            "shermaQuestActive",
+            "shermaInBellhart",
+            "fixerQuestBoardConvo",
+            "conclaveHubOpen",
+            "belltowerRepaired",
+            "visitedBellhartSaved",
+        };
+
+        private static void SetNpcSpawnFlags()
+        {
+            if (!QuestModPlugin.AllQuestsAvailable)
+                return;
+
+            if (PlayerData.instance == null)
+                return;
+
+            int set = 0;
+            var pdType = PlayerData.instance.GetType();
+            foreach (var flag in NpcSpawnFlags)
+            {
+                var field = pdType.GetField(flag, BindingFlags.Public | BindingFlags.Instance);
+                if (field == null || field.FieldType != typeof(bool))
+                    continue;
+
+                if ((bool)field.GetValue(PlayerData.instance))
+                    continue;
+
+                field.SetValue(PlayerData.instance, true);
+                set++;
+                QuestModPlugin.LogDebugInfo($"SetNpcSpawnFlags: {flag} = true");
+            }
+
+            if (set > 0)
+                QuestModPlugin.Log.LogInfo($"Set {set} NPC spawn flags for AllQuests mode");
+        }
+
+        private static void ActivateQuestBoards()
+        {
+            if (!QuestModPlugin.AllQuestsAvailable)
+                return;
+
+            var allObjects = Object.FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            foreach (var obj in allObjects)
+            {
+                if (obj.GetType().Name == "QuestBoardInteractable" && !obj.gameObject.activeSelf)
+                {
+                    obj.gameObject.SetActive(true);
+                    QuestModPlugin.LogDebugInfo($"Activated quest board: {obj.gameObject.name}");
+                }
+            }
+        }
+
         private static void RefreshQuestBoards()
         {
             var allObjects = Object.FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Include, FindObjectsSortMode.None);
@@ -210,6 +333,42 @@ namespace QuestMod
                     }
                 }
             }
+        }
+
+        private static void DumpNpcDiagnostics()
+        {
+            if (!QuestModPlugin.AllQuestsAvailable) return;
+
+            QuestModPlugin.Log.LogInfo("=== NPC Diagnostics ===");
+            var fsms = Object.FindObjectsByType<PlayMakerFSM>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            foreach (var fsm in fsms)
+            {
+                if (fsm == null || fsm.FsmStates == null) continue;
+                if (!IsWhitelisted(fsm.gameObject)) continue;
+
+                var go = fsm.gameObject;
+                var actions = new List<string>();
+                foreach (var state in fsm.FsmStates)
+                {
+                    if (state.Actions == null) continue;
+                    foreach (var action in state.Actions)
+                    {
+                        var actionName = action.GetType().Name;
+                        if (actionName.Contains("Quest") || actionName.Contains("Bool") ||
+                            actionName.Contains("PlayerData") || actionName.Contains("Activate") ||
+                            actionName.Contains("SetActive") || actionName.Contains("GetPlayerData"))
+                        {
+                            actions.Add($"{state.Name}/{actionName}");
+                        }
+                    }
+                }
+
+                if (actions.Count > 0)
+                {
+                    QuestModPlugin.Log.LogInfo($"  [{(go.activeInHierarchy ? "ON" : "OFF")}] {go.name}/{fsm.FsmName}: {string.Join(", ", actions)}");
+                }
+            }
+            QuestModPlugin.Log.LogInfo("=== End NPC Diagnostics ===");
         }
     }
 
