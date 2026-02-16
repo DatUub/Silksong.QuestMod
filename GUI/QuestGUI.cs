@@ -42,10 +42,17 @@ namespace QuestMod
         private void OnGUI()
         {
             if (!show) return;
+
+            float scale = QuestModPlugin.GuiScale.Value;
+            var savedMatrix = GUI.matrix;
+            GUI.matrix = Matrix4x4.TRS(Vector3.zero, Quaternion.identity, new Vector3(scale, scale, 1));
+
             GUI.skin = QuestGUISkin.Get();
             var keyName = QuestModPlugin.GuiToggleKey.Value.MainKey.ToString();
             var version = typeof(QuestModPlugin).Assembly.GetName().Version;
             rect = GUI.Window(12345, rect, Draw, $"Quest Manager ({keyName}) v{version.Major}.{version.Minor}.{version.Build}");
+
+            GUI.matrix = savedMatrix;
         }
 
         private void RefreshOverrides()

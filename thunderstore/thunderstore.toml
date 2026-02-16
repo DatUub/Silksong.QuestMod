@@ -14,7 +14,7 @@ silksong_modding-FsmUtil = "0.3.13"
 silksong_modding-UnityHelper = "1.1.1"
 
 [build]
-icon = "./icon.png"
+icon = "./logo.png"
 readme = "../README.md"
 outdir = "./dist"
 

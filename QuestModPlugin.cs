@@ -68,6 +68,7 @@ namespace QuestMod
         public static ConfigEntry<bool> QuestItemInvincible { get; private set; } = null!;
         public static ConfigEntry<bool> ShowQuestDisplayNames { get; private set; } = null!;
         public static ConfigEntry<KeyboardShortcut> GuiToggleKey { get; private set; } = null!;
+        public static ConfigEntry<float> GuiScale { get; private set; } = null!;
         public static ConfigEntry<bool> GuaranteedSilverBells { get; private set; } = null!;
         public static ConfigEntry<bool> DebugLogging { get; private set; } = null!;
         public static ConfigEntry<bool> DevRemoveLimits { get; private set; } = null!;
@@ -154,6 +155,16 @@ namespace QuestMod
                     "Key to open/close the Quest Manager window.",
                     null,
                     new { Order = 2 })
+            );
+
+            GuiScale = Config.Bind(
+                "GUI",
+                "GuiScale",
+                1f,
+                new ConfigDescription(
+                    "Scale multiplier for the Quest Manager window. Increase for high-DPI displays (e.g. 1.5 for 150% Windows scaling).",
+                    new AcceptableValueRange<float>(0.5f, 3f),
+                    new { Order = 3 })
             );
 
             GuaranteedSilverBells = Config.Bind(
