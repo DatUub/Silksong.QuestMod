@@ -39,11 +39,20 @@ namespace QuestMod
             }
         }
 
+        private float GetGuiScale()
+        {
+            float configScale = QuestModPlugin.GuiScale.Value;
+            if (configScale > 0f) return Mathf.Round(configScale * 20f) / 20f;
+            float dpi = Screen.dpi;
+            if (dpi <= 0f) return 1f;
+            return Mathf.Round(Mathf.Clamp(dpi / 96f, 0.5f, 3f) * 20f) / 20f;
+        }
+
         private void OnGUI()
         {
             if (!show) return;
 
-            float scale = QuestModPlugin.GuiScale.Value;
+            float scale = GetGuiScale();
             var savedMatrix = GUI.matrix;
             GUI.matrix = Matrix4x4.TRS(Vector3.zero, Quaternion.identity, new Vector3(scale, scale, 1));
 

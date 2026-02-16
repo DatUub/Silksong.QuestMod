@@ -160,10 +160,10 @@ namespace QuestMod
             GuiScale = Config.Bind(
                 "GUI",
                 "GuiScale",
-                1f,
+                0f,
                 new ConfigDescription(
-                    "Scale multiplier for the Quest Manager window. Increase for high-DPI displays (e.g. 1.5 for 150% Windows scaling).",
-                    new AcceptableValueRange<float>(0.5f, 3f),
+                    "GUI scale override. 0 = auto-detect from system DPI. Set manually (e.g. 1.5) to override.",
+                    new AcceptableValueRange<float>(0f, 3f),
                     new { Order = 3 })
             );
 
