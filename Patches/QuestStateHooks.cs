@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Reflection;
+
 using HutongGames.PlayMaker;
 using HutongGames.PlayMaker.Actions;
 using QuestPlaymakerActions;
@@ -42,7 +43,6 @@ namespace QuestMod
             QuestModPlugin.LogDebugInfo($"Scene loaded: {scene.name}");
 
             PatchedFSMs.Clear();
-            PatchAllQuestFSMs();
             SetNpcSpawnFlags();
             ActivateQuestBoards();
             RefreshQuestBoards();
@@ -98,23 +98,29 @@ namespace QuestMod
             var fsms = Object.FindObjectsByType<PlayMakerFSM>(FindObjectsInactive.Include, FindObjectsSortMode.None);
             foreach (var fsm in fsms)
             {
-                if (fsm == null || fsm.FsmStates == null)
+                if (fsm == null) continue;
+
+                if (!IsWhitelisted(fsm.gameObject))
                     continue;
 
                 if (fsm.gameObject.GetComponent<SceneAdditiveLoadConditional>() != null)
                     continue;
 
-                var fsmKey = $"{fsm.gameObject.name}/{fsm.FsmName}";
-                if (PatchedFSMs.Contains(fsmKey))
-                    continue;
+
 
                 try
                 {
+                    if (fsm.FsmStates == null) continue;
+
+                    var fsmKey = $"{fsm.gameObject.name}/{fsm.FsmName}";
+                    if (PatchedFSMs.Contains(fsmKey))
+                        continue;
+
                     PatchQuestStateFSM(fsm, fsmKey);
                 }
                 catch (System.Exception ex)
                 {
-                    QuestModPlugin.Log.LogDebug($"Error patching FSM {fsmKey}: {ex.Message}");
+                    QuestModPlugin.Log.LogDebug($"Error patching FSM {fsm.gameObject.name}: {ex.Message}");
                 }
             }
         }
@@ -122,7 +128,6 @@ namespace QuestMod
         private static void PatchQuestStateFSM(PlayMakerFSM fsm, string fsmKey)
         {
             bool patched = false;
-            bool whitelisted = IsWhitelisted(fsm.gameObject);
 
             foreach (var state in fsm.FsmStates)
             {
@@ -130,12 +135,12 @@ namespace QuestMod
 
                 foreach (var action in state.Actions)
                 {
-                    if (whitelisted && action is CheckQuestStateV2 checkV2)
+                    if (action is CheckQuestStateV2 checkV2)
                     {
                         PatchCheckAction(checkV2, state.Name, fsmKey, "V2");
                         patched = true;
                     }
-                    else if (whitelisted && action.GetType().Name == "CheckQuestState")
+                    else if (action.GetType().Name == "CheckQuestState")
                     {
                         PatchCheckActionV1(action, state.Name, fsmKey);
                         patched = true;
@@ -343,29 +348,39 @@ namespace QuestMod
             var fsms = Object.FindObjectsByType<PlayMakerFSM>(FindObjectsInactive.Include, FindObjectsSortMode.None);
             foreach (var fsm in fsms)
             {
-                if (fsm == null || fsm.FsmStates == null) continue;
+                if (fsm == null) continue;
                 if (!IsWhitelisted(fsm.gameObject)) continue;
 
-                var go = fsm.gameObject;
-                var actions = new List<string>();
-                foreach (var state in fsm.FsmStates)
+
+                try
                 {
-                    if (state.Actions == null) continue;
-                    foreach (var action in state.Actions)
+                    if (fsm.FsmStates == null) continue;
+
+                    var go = fsm.gameObject;
+                    var actions = new List<string>();
+                    foreach (var state in fsm.FsmStates)
                     {
-                        var actionName = action.GetType().Name;
-                        if (actionName.Contains("Quest") || actionName.Contains("Bool") ||
-                            actionName.Contains("PlayerData") || actionName.Contains("Activate") ||
-                            actionName.Contains("SetActive") || actionName.Contains("GetPlayerData"))
+                        if (state.Actions == null) continue;
+                        foreach (var action in state.Actions)
                         {
-                            actions.Add($"{state.Name}/{actionName}");
+                            var actionName = action.GetType().Name;
+                            if (actionName.Contains("Quest") || actionName.Contains("Bool") ||
+                                actionName.Contains("PlayerData") || actionName.Contains("Activate") ||
+                                actionName.Contains("SetActive") || actionName.Contains("GetPlayerData"))
+                            {
+                                actions.Add($"{state.Name}/{actionName}");
+                            }
                         }
                     }
-                }
 
-                if (actions.Count > 0)
+                    if (actions.Count > 0)
+                    {
+                        QuestModPlugin.Log.LogInfo($"  [{(go.activeInHierarchy ? "ON" : "OFF")}] {go.name}/{fsm.FsmName}: {string.Join(", ", actions)}");
+                    }
+                }
+                catch (System.Exception ex)
                 {
-                    QuestModPlugin.Log.LogInfo($"  [{(go.activeInHierarchy ? "ON" : "OFF")}] {go.name}/{fsm.FsmName}: {string.Join(", ", actions)}");
+                    QuestModPlugin.Log.LogDebug($"Diagnostics error on {fsm.gameObject.name}: {ex.Message}");
                 }
             }
             QuestModPlugin.Log.LogInfo("=== End NPC Diagnostics ===");

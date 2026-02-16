@@ -111,6 +111,7 @@ namespace QuestMod
 
                 if (QuestRegistry.ExcludedQuests.Contains(questName))
                 {
+                    QuestModPlugin.Log.LogInfo($"  SKIP [{questName}]: excluded");
                     skipped++;
                     continue;
                 }
@@ -120,12 +121,14 @@ namespace QuestMod
 
                 if (!QuestModPlugin.IsQuestDiscovered(questName))
                 {
+                    QuestModPlugin.Log.LogInfo($"  SKIP [{questName}]: not discovered");
                     skipped++;
                     continue;
                 }
 
                 if (!IsChainPrereqMet(questName))
                 {
+                    QuestModPlugin.Log.LogInfo($"  SKIP [{questName}]: chain prereq not met");
                     skipped++;
                     continue;
                 }
