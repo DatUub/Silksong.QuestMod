@@ -8,6 +8,13 @@
         "Courier Delivery Dustpens Slave",
         "Courier Delivery Fixer"
     ],
+    "farmableExclude": [
+        "Mossberry Collection 1",
+        "Shell Flowers",
+        "Rock Rollers",
+        "Shiny Bell Goomba",
+        "Extractor Blue"
+    ],
     "mutuallyExclusive": {
         "Huntress Quest": "Huntress Quest Runt",
         "Huntress Quest Runt": "Huntress Quest"

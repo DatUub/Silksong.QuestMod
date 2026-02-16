@@ -21,6 +21,7 @@ namespace QuestMod
         public static Dictionary<string, int[]> MaxCaps { get; private set; } = new Dictionary<string, int[]>();
         public static Dictionary<string, string[]> ChecklistQuests { get; private set; } = new Dictionary<string, string[]>();
         public static HashSet<string> SequentialQuests { get; private set; } = new HashSet<string>();
+        public static HashSet<string> FarmableExcluded { get; private set; } = new HashSet<string>();
 
         public static int DefaultThreshold { get; private set; } = 17;
         public static Dictionary<string, float> SilkSoulPointValues { get; private set; } = new Dictionary<string, float>();
@@ -48,6 +49,7 @@ namespace QuestMod
             var root = JObject.Parse(json);
 
             LoadExcluded(root);
+            LoadFarmableExclude(root);
             LoadMutuallyExclusive(root);
             LoadSharedTargets(root);
             LoadSilkSoul(root);
@@ -68,6 +70,17 @@ namespace QuestMod
             {
                 var val = item.Value<string>();
                 if (val != null) ExcludedQuests.Add(val);
+            }
+        }
+
+        private static void LoadFarmableExclude(JObject root)
+        {
+            var arr = root["farmableExclude"] as JArray;
+            if (arr == null) return;
+            foreach (var item in arr)
+            {
+                var val = item.Value<string>();
+                if (val != null) FarmableExcluded.Add(val);
             }
         }
 

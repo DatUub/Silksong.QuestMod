@@ -71,6 +71,12 @@ namespace QuestMod
                 countInputs.Clear();
                 RefreshOverrides();
             }
+            if (GUILayout.Button("Farmable", GUILayout.Width(65)))
+            {
+                QuestCompletionOverrides.ApplyPresetAll("farmable");
+                countInputs.Clear();
+                RefreshOverrides();
+            }
             if (GUILayout.Button("Default", GUILayout.Width(55)))
             {
                 QuestCompletionOverrides.ApplyPresetAll("default");

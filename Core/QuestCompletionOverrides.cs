@@ -59,6 +59,13 @@ namespace QuestMod
             return (originalCount + 1) / 2;
         }
 
+        public static int GetFarmableCount(int originalCount)
+        {
+            int half = (originalCount + 1) / 2;
+            if (half > 1 && half % 2 != 0) half--;
+            return half;
+        }
+
         public static void ApplyPresetAll(string preset)
         {
             if (!IsInitialized) return;
@@ -82,6 +89,12 @@ namespace QuestMod
                             break;
                         case "qol":
                             newCount = GetQoLCount(orig[i]);
+                            break;
+                        case "farmable":
+                            if (QuestRegistry.FarmableExcluded.Contains(questName))
+                                newCount = orig[i];
+                            else
+                                newCount = GetFarmableCount(orig[i]);
                             break;
                         default:
                             newCount = orig[i];
