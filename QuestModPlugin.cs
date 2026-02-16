@@ -41,6 +41,7 @@ namespace QuestMod
         public static void SetAllQuestsAccepted(bool value)
         {
             AllQuestsAccepted = value;
+            if (value) AllQuestsAvailable = true;
             SyncToSaveData();
         }
 
