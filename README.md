@@ -149,4 +149,4 @@ Pull requests are welcome! Please:
 
 ## SPECIAL THANKS
 
-- **TheMythical2046** for the original mod request, quest research and testing, and feedback :3
+- **TheMythical2046** - For the original mod request, quest research and testing, and feedback :3
