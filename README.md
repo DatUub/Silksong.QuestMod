@@ -32,9 +32,7 @@ Install these from Thunderstore first:
 - **DataManager**
 - **FsmUtil**
 - **UnityHelper**
-
-`MonoMod` runtime libraries required by Harmony (`MonoMod.Backports`, `MonoMod.Core`, `MonoMod.RuntimeDetour`, etc.) are bundled with this mod package automatically.
-
+- **MonoDetour BepInEx 5**
 ## Keybinds
 
 | Key | Action |
@@ -89,8 +87,13 @@ Found in `BepInEx/config/com.silkmod.questmod.cfg`, or via the **Tools** tab in 
 
 ## Changelog
 
+
+### v1.0.9
+- No longer bundles `MonoMod` runtime DLLs. Now relies on the MonoDetour_BepInEx_5 Thunderstore dependency for runtime patching libraries.
+- Fixes startup/load errors caused by missing `MonoMod.Backports` on some installs.
+
 ### v1.0.8
-- Include `MonoMod` runtime DLLs in packaged output to fix startup errors caused by missing `MonoMod.Backports` on some player installs
+- (OBSOLETE) Previously included `MonoMod` runtime DLLs in packaged output to fix startup errors caused by missing `MonoMod.Backports` on some player installs
 
 ### v1.0.7
 - Fix save data crash when loading saves from older mod versions
