@@ -35,6 +35,8 @@ Install these from Thunderstore first:
 - **FsmUtil**
 - **UnityHelper**
 
+`MonoMod` runtime libraries required by Harmony (`MonoMod.Backports`, `MonoMod.Core`, `MonoMod.RuntimeDetour`, etc.) are bundled with this mod package automatically.
+
 ## Keybinds
 
 | Key | Action |
@@ -88,6 +90,9 @@ Found in `BepInEx/config/com.silkmod.questmod.cfg`, or via the **Tools** tab in 
 - Mr Mushroom may not spawn at later locations in All Wishes Mode
 
 ## Changelog
+
+### v1.0.8
+- Include `MonoMod` runtime DLLs in packaged output to fix startup errors caused by missing `MonoMod.Backports` on some player installs
 
 ### v1.0.7
 - Fix save data crash when loading saves from older mod versions

@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.0.8 — Packaging Fix
+
+### Fixes
+- Include `MonoMod` runtime DLLs (`MonoMod.Backports`, `MonoMod.Core`, `MonoMod.RuntimeDetour`, etc.) in mod output and Thunderstore package to prevent startup/load failures on some installs.
+
 ## v1.0.0 — Initial Release
 
 ### Features

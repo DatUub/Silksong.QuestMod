@@ -11,6 +11,7 @@
     <NoWarn>$(NoWarn);MSB3270</NoWarn>
     <RestorePackagesWithLockFile>True</RestorePackagesWithLockFile>
     <RestoreLockedMode Condition="'$(CI)' == 'true'">True</RestoreLockedMode>
+    <CopyLocalLockFileAssemblies>True</CopyLocalLockFileAssemblies>
     <PathMap Condition="'$(Configuration)' == 'Release'">$(MSBuildProjectDirectory)=/</PathMap>
   </PropertyGroup>
 
@@ -42,6 +43,7 @@
       <ItemGroup>
           <Binaries Include="$(TargetPath)" />
           <Binaries Include="$(TargetDir)/$(TargetName).pdb" />
+        <Binaries Include="$(TargetDir)/MonoMod*.dll" />
       </ItemGroup>
 
       <Copy SourceFiles="@(Binaries)" DestinationFolder="$(SilksongFolder)/BepInEx/plugins/QuestMod" />
@@ -53,7 +55,11 @@
       </PropertyGroup>
       <RemoveDir Directories="$(ThunderstoreDir)/temp;$(ThunderstoreDir)/dist" />
       <MakeDir Directories="$(ThunderstoreDir)/temp/plugins/QuestMod" />
-      <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ThunderstoreDir)/temp/plugins/QuestMod" />
+        <ItemGroup>
+          <ThunderstoreBinaries Include="$(TargetPath)" />
+          <ThunderstoreBinaries Include="$(TargetDir)/MonoMod*.dll" />
+        </ItemGroup>
+        <Copy SourceFiles="@(ThunderstoreBinaries)" DestinationFolder="$(ThunderstoreDir)/temp/plugins/QuestMod" />
       <Exec Command="dotnet tool restore" />
       <Exec Command="dotnet tcli build --config-path &quot;$(ThunderstoreDir)/thunderstore.toml&quot; --package-name &quot;$(AssemblyTitle)&quot; --package-version $(Version)" />
   </Target>
