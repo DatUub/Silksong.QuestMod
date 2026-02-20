@@ -14,8 +14,6 @@ A BepInEx mod for Hollow Knight: Silksong that gives you full control over the q
 - **Guaranteed Silver Bells** — Force every bell drop to be a Silver Bell (overrides the 75/25 split)
 - **Quest Item Protection** — Prevent delivery quest items from being destroyed by enemy attacks
 - **Act 3 Toggle** — Manually toggle Black Thread World state
-- **Data-Driven** — Quest registry, max caps, chains, and S&S data all loaded from `QuestCapabilities.json`
-
 ## Installation
 
 ### Via Thunderstore (recommended)
