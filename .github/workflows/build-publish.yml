@@ -12,6 +12,11 @@ on:
         required: true
         default: false
         type: boolean
+      force_github_release:
+        description: Force creation of GitHub release (bypass tag check)
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   contents: write
@@ -108,7 +113,16 @@ jobs:
     needs:
       - build
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && needs.build.outputs.allow-release == 'true' && needs.build.outputs.is-new-version == 'true'
+    if: |
+      (
+        github.event_name == 'push' &&
+        needs.build.outputs.allow-release == 'true' &&
+        needs.build.outputs.is-new-version == 'true'
+      ) ||
+      (
+        github.event_name == 'workflow_dispatch' &&
+        github.event.inputs.force_github_release == 'true'
+      )
 
     steps:
     - name: Download artifact
