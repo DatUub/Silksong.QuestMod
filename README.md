@@ -68,7 +68,7 @@ Found in `BepInEx/config/com.silkmod.questmod.cfg`, or via the **Tools** tab in 
 | Toggle | Description |
 |--------|-------------|
 | All Quests Available | Show all quests on boards and NPCs, bypass story gates |
-| All Quests Accepted | Auto-accept every available quest on scene load |
+| All Quests Accepted | Auto-accept every available quest on scene load (forces Available on) |
 
 ## GUI Tabs
 
@@ -86,6 +86,12 @@ Found in `BepInEx/config/com.silkmod.questmod.cfg`, or via the **Tools** tab in 
 - Shakra does not appear when Trail's End is active in All Wishes Mode
 - Junilana has missing NPC behavior in All Wishes Mode
 - Mr Mushroom may not spawn at later locations in All Wishes Mode
+
+## Changelog
+
+### v1.0.7
+- Fix save data crash when loading saves from older mod versions
+- "All Quests Accepted" now automatically enables "All Quests Available"
 
 ## Project Structure
 

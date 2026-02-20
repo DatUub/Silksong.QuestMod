@@ -35,6 +35,7 @@
   <ItemGroup>
     <Folder Remove="thunderstore/temp;thunderstore/dist" />
     <EmbeddedResource Include="Data\QuestCapabilities.json" />
+    <Compile Remove="BuildBundles.cs" />
   </ItemGroup>
 
   <Target Name="CopyMod" AfterTargets="PostBuildEvent" Condition="'$(SilksongFolder)' != ''">

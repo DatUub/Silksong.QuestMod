@@ -1,8 +1,10 @@
 using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Logging;
+using Newtonsoft.Json;
 using Silksong.DataManager;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 
 namespace QuestMod
@@ -29,6 +31,32 @@ namespace QuestMod
             }
         }
 
+        void IRawSaveDataMod.ReadSaveData(Stream saveFile)
+        {
+            if (saveFile == null)
+            {
+                SaveData = null;
+                return;
+            }
+
+            try
+            {
+                using var sr = new StreamReader(saveFile);
+                using var reader = new JsonTextReader(sr);
+                var ser = JsonSerializer.CreateDefault(new JsonSerializerSettings
+                {
+                    TypeNameHandling = TypeNameHandling.Auto,
+                    ObjectCreationHandling = ObjectCreationHandling.Replace,
+                });
+                SaveData = ser.Deserialize<QuestModSaveData>(reader);
+            }
+            catch (System.Exception ex)
+            {
+                Log.LogWarning($"Failed to deserialize save data (old format?), resetting: {ex.Message}");
+                SaveData = new QuestModSaveData();
+            }
+        }
+
         public static bool AllQuestsAvailable { get; private set; }
         public static bool AllQuestsAccepted { get; private set; }
 
@@ -41,7 +69,8 @@ namespace QuestMod
         public static void SetAllQuestsAccepted(bool value)
         {
             AllQuestsAccepted = value;
-            if (value) AllQuestsAvailable = true;
+            if (value)
+                AllQuestsAvailable = true;
             SyncToSaveData();
         }
 

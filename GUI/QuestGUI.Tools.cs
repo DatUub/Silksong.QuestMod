@@ -56,15 +56,19 @@ namespace QuestMod
             GUILayout.Space(10);
             GUILayout.Label("Mode (this save)", QuestGUISkin.SectionHeader);
 
-            bool allAvail = QuestModPlugin.AllQuestsAvailable;
-            bool newAllAvail = GUILayout.Toggle(allAvail,
-                new GUIContent("All Quests Available", "Bypasses act/chain prerequisites for this save."));
-            if (newAllAvail != allAvail) QuestModPlugin.SetAllQuestsAvailable(newAllAvail);
-
             bool allAccepted = QuestModPlugin.AllQuestsAccepted;
             bool newAllAccepted = GUILayout.Toggle(allAccepted,
-                new GUIContent("All Quests Accepted", "Auto-inject and accept every quest each scene load."));
+                new GUIContent("All Quests Accepted", "Auto-inject and accept every quest each scene load. Forces Available + Wishboards on."));
             if (newAllAccepted != allAccepted) QuestModPlugin.SetAllQuestsAccepted(newAllAccepted);
+
+            GUI.enabled = !allAccepted;
+
+            bool allAvail = QuestModPlugin.AllQuestsAvailable;
+            bool newAllAvail = GUILayout.Toggle(allAvail,
+                new GUIContent("  All Quests Available", "Bypasses act/chain prerequisites for this save."));
+            if (newAllAvail != allAvail) QuestModPlugin.SetAllQuestsAvailable(newAllAvail);
+
+            GUI.enabled = true;
 
             GUILayout.Space(10);
             GUILayout.Label("Quick Config", QuestGUISkin.SectionHeader);

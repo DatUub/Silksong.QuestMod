@@ -1,14 +1,5 @@
 # QuestMod — TODO
 
-### Release
-
-- [ ] Flip `allow-release` to `'true'` in `build-publish.yml`
-- [ ] Announce in the modding Discord server
-
----
-
-## 🔮 Post-Release *(sorted easiest → hardest)*
-
 ### 1. Testing & Validation
 - [ ] TheMythical playtest — collect feedback
 
@@ -25,16 +16,15 @@
 
 ### 3. Wishboard Access
 - [ ] Bypass wishboard unlock requirement (use boards without defeating Bell Beast)
-    * Bell Beast completion is hard-coded — need to intercept the check and fake the flag
+    * Attempted `bonebottomQuestBoardFixed` + reparenting — caused softlocks and duplicate NPCs. Needs different approach.
 
 ### 4. Delivery System
 - [ ] Separate **Delivery tab** — deliveries + Great Gourmand
 - [ ] Gourmand custom implementation (8 segments, 47s decay)
 
 ### 5. All Wishes Mode
+- [x] Chain gating respected (Silk Defeat Snare gated behind Soul Snare chain)
 - [ ] "Pure" vs "adjusted" All Wishes Mode
-    * Make sure chain gating is respected. 
-- [ ] Boss ordering (defeat prerequisites)
 - [ ] Edge cases: SB2/4C shared arena, Pinstress/Needle Strike, double Trobbio
 
 ### 6. ItemChanger Integration
