@@ -1,7 +1,7 @@
 # Changelog
 
 
-## v1.0.9 — Dependency Handling Fix
+## v1.1.0 — Dependency Handling Fix
 
 ### Fixes
 - Remove bundled MonoMod.* DLLs from mod output. Now relies on MonoDetour_BepInEx_5 Thunderstore dependency for runtime patching libraries.

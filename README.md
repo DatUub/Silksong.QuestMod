@@ -88,11 +88,11 @@ Found in `BepInEx/config/com.silkmod.questmod.cfg`, or via the **Tools** tab in 
 ## Changelog
 
 
-### v1.0.9
+### v1.1.0
 - No longer bundles `MonoMod` runtime DLLs. Now relies on the MonoDetour_BepInEx_5 Thunderstore dependency for runtime patching libraries.
 - Fixes startup/load errors caused by missing `MonoMod.Backports` on some installs.
 
-### v1.0.8
+### v1.0.8 (obsolete)
 - (OBSOLETE) Previously included `MonoMod` runtime DLLs in packaged output to fix startup errors caused by missing `MonoMod.Backports` on some player installs
 
 ### v1.0.7
