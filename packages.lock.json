@@ -101,60 +101,6 @@
         "resolved": "0.11.6",
         "contentHash": "f33RkDtZO8VlGXCtmQIviOtxgnUdym9xx/b1p9h91CRGOsJFxCFOFK1FDbVt1OCf1aWwYejUFa2MOQyFWTFjbA=="
       },
-      "MonoMod.Backports": {
-        "type": "Transitive",
-        "resolved": "1.1.2",
-        "contentHash": "baYlNy8n8kmaNhNvqmZ/dIPOeO1r9//dG1i2WbunMWtWZ2EKtIgmXaS+ZzphzTsikkGnoD4Jwr5g0TVdpDjgpw==",
-        "dependencies": {
-          "MonoMod.ILHelpers": "1.1.0",
-          "System.Reflection.Emit.ILGeneration": "4.7.0",
-          "System.Reflection.Emit.Lightweight": "4.7.0"
-        }
-      },
-      "MonoMod.Core": {
-        "type": "Transitive",
-        "resolved": "1.3.3",
-        "contentHash": "ihX8QeutQcN5DfRGci8Vn3cXWj+gCyBpl5nofDDk1A1ycVxDtcMT8WYpjCd6PXunHXiDT81yhOSrC+cQiNDEWg==",
-        "dependencies": {
-          "Mono.Cecil": "0.11.6",
-          "MonoMod.Backports": "1.1.2",
-          "MonoMod.ILHelpers": "1.1.0",
-          "MonoMod.Utils": "25.0.11",
-          "System.Reflection.Emit.ILGeneration": "4.7.0",
-          "System.Reflection.Emit.Lightweight": "4.7.0"
-        }
-      },
-      "MonoMod.ILHelpers": {
-        "type": "Transitive",
-        "resolved": "1.1.0",
-        "contentHash": "L2FWjhTrv7tcIxshfZ+M3OcaNr4cNw0IwiVZEgwqRnZ5QAN3+RrNJ8ZwCzwXUWyPDqooJxMcjjg8PsSYUiNBjQ=="
-      },
-      "MonoMod.RuntimeDetour": {
-        "type": "Transitive",
-        "resolved": "25.3.3",
-        "contentHash": "IU2JnGoYUjqxJImgMuA5dTdOrhzW1KNnoo0XM9LBrkO7vN+RN7GMOrIRTh9BZ3c0V9G+wAqQNcBMsL4S4Dj6HA==",
-        "dependencies": {
-          "Mono.Cecil": "0.11.6",
-          "MonoMod.Backports": "1.1.2",
-          "MonoMod.Core": "1.3.3",
-          "MonoMod.ILHelpers": "1.1.0",
-          "MonoMod.Utils": "25.0.11",
-          "System.Reflection.Emit.ILGeneration": "4.7.0",
-          "System.Reflection.Emit.Lightweight": "4.7.0"
-        }
-      },
-      "MonoMod.Utils": {
-        "type": "Transitive",
-        "resolved": "25.0.11",
-        "contentHash": "RBbGIxk3fIIQIL4ERCZSIwW9BXBCG4HCCHgGJ/QIhwkTpF6Edxu0dLPJi/Efhx4qYkuWEJdhlA3q41GCNUZL5g==",
-        "dependencies": {
-          "Mono.Cecil": "0.11.6",
-          "MonoMod.Backports": "1.1.2",
-          "MonoMod.ILHelpers": "1.1.0",
-          "System.Reflection.Emit.ILGeneration": "4.7.0",
-          "System.Reflection.Emit.Lightweight": "4.7.0"
-        }
-      },
       "System.Buffers": {
         "type": "Transitive",
         "resolved": "4.5.1",

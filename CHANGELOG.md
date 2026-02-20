@@ -1,6 +1,11 @@
 # Changelog
 
-## v1.0.8 — Packaging Fix
+
+## v1.0.9 — Dependency Handling Fix
+
+### Fixes
+- Remove bundled MonoMod.* DLLs from mod output. Now relies on MonoDetour_BepInEx_5 Thunderstore dependency for runtime patching libraries.
+- Fixes startup/load errors caused by missing MonoMod.Backports on some installs.
 
 ### Fixes
 - Include `MonoMod` runtime DLLs (`MonoMod.Backports`, `MonoMod.Core`, `MonoMod.RuntimeDetour`, etc.) in mod output and Thunderstore package to prevent startup/load failures on some installs.
