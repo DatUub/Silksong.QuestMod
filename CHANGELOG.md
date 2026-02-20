@@ -1,14 +1,18 @@
 # Changelog
 
 
-## v1.1.0 — Dependency Handling Fix
+## v1.1.1 — Dependency Fix
 
 ### Fixes
-- Remove bundled MonoMod.* DLLs from mod output. Now relies on MonoDetour_BepInEx_5 Thunderstore dependency for runtime patching libraries.
-- Fixes startup/load errors caused by missing MonoMod.Backports on some installs.
+- Revert HarmonyX to 2.9.0 (matches game runtime) to fix `MonoMod.Backports` startup errors
+- Remove MonoDetour dependency (not needed)
+- Fix dependabot auto-bumping HarmonyX/MonoMod
+- Fix GUI rendering garbage on Linux/Wine when Segoe UI font is not installed
 
-### Fixes
-- Include `MonoMod` runtime DLLs (`MonoMod.Backports`, `MonoMod.Core`, `MonoMod.RuntimeDetour`, etc.) in mod output and Thunderstore package to prevent startup/load failures on some installs.
+## v1.1.0 — BROKEN
+
+### Notes
+- Bumped HarmonyX to 2.16.0 which required MonoMod.Backports not present at runtime
 
 ## v1.0.0 — Initial Release
 

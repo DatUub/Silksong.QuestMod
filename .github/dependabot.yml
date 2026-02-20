@@ -20,10 +20,9 @@ updates:
         patterns:
           - "System.*"
           - "Microsoft.*"
-      harmony-packages:
-        patterns:
-          - "HarmonyX"
-          - "MonoMod.*"
+    ignore:
+      - dependency-name: "HarmonyX"
+      - dependency-name: "MonoMod.*"
 
   # Monitor GitHub Actions versions
   - package-ecosystem: "github-actions"

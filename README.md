@@ -32,7 +32,6 @@ Install these from Thunderstore first:
 - **DataManager**
 - **FsmUtil**
 - **UnityHelper**
-- **MonoDetour BepInEx 5**
 ## Keybinds
 
 | Key | Action |
@@ -88,9 +87,14 @@ Found in `BepInEx/config/com.silkmod.questmod.cfg`, or via the **Tools** tab in 
 ## Changelog
 
 
-### v1.1.0
-- No longer bundles `MonoMod` runtime DLLs. Now relies on the MonoDetour_BepInEx_5 Thunderstore dependency for runtime patching libraries.
-- Fixes startup/load errors caused by missing `MonoMod.Backports` on some installs.
+### v1.1.1
+- Reverts HarmonyX to 2.9.0 (matches game runtime) to fix `MonoMod.Backports` startup errors
+- Removes MonoDetour dependency (not needed)
+- Fixes dependabot auto-bumping HarmonyX/MonoMod
+- Fixes GUI rendering on Linux/Wine when Segoe UI font is not installed
+
+### v1.1.0 (broken)
+- (BROKEN) Bumped HarmonyX to 2.16.0 which required MonoMod.Backports not present at runtime
 
 ### v1.0.8 (obsolete)
 - (OBSOLETE) Previously included `MonoMod` runtime DLLs in packaged output to fix startup errors caused by missing `MonoMod.Backports` on some player installs

@@ -44,7 +44,9 @@ namespace QuestMod
             skin = ScriptableObject.CreateInstance<GUISkin>();
             skin.hideFlags = HideFlags.DontSave;
 
-            skin.font = Font.CreateDynamicFontFromOSFont("Segoe UI", 13);
+            var installedFonts = Font.GetOSInstalledFontNames();
+            if (System.Array.Exists(installedFonts, f => f == "Segoe UI"))
+                skin.font = Font.CreateDynamicFontFromOSFont("Segoe UI", 13);
 
             skin.window = new GUIStyle(GUI.skin.window)
             {

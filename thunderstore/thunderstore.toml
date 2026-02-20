@@ -3,9 +3,9 @@ schemaVersion = "0.0.1"
 
 [package]
 namespace = "DatUub"
-description = "Quest management mod for Silksong — accept, complete, and customize quest targets with a full debug GUI. (Dependency handling fix)"
+description = "Quest management mod for Silksong — accept, complete, and customize quest targets with a full debug GUI."
 # Bump version for dependency fix
-version = "1.1.0"
+version = "1.1.1"
 websiteUrl = "https://github.com/DatUub/Silksong.QuestMod"
 containsNsfwContent = false
 
@@ -14,7 +14,6 @@ BepInEx-BepInExPack_Silksong = "5.4.2304"
 silksong_modding-DataManager = "1.2.1"
 silksong_modding-FsmUtil = "0.3.13"
 silksong_modding-UnityHelper = "1.1.1"
-MonoDetour-MonoDetour_BepInEx_5 = "0.7.5"
 
 [build]
 icon = "./logo.png"
