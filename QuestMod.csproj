@@ -40,11 +40,10 @@
   </ItemGroup>
 
   <Target Name="CopyMod" AfterTargets="PostBuildEvent" Condition="'$(SilksongFolder)' != ''">
-      <ItemGroup>
+        <ItemGroup>
           <Binaries Include="$(TargetPath)" />
           <Binaries Include="$(TargetDir)/$(TargetName).pdb" />
-        <Binaries Include="$(TargetDir)/MonoMod*.dll" />
-      </ItemGroup>
+        </ItemGroup>
 
       <Copy SourceFiles="@(Binaries)" DestinationFolder="$(SilksongFolder)/BepInEx/plugins/QuestMod" />
   </Target>
@@ -57,7 +56,6 @@
       <MakeDir Directories="$(ThunderstoreDir)/temp/plugins/QuestMod" />
         <ItemGroup>
           <ThunderstoreBinaries Include="$(TargetPath)" />
-          <ThunderstoreBinaries Include="$(TargetDir)/MonoMod*.dll" />
         </ItemGroup>
         <Copy SourceFiles="@(ThunderstoreBinaries)" DestinationFolder="$(ThunderstoreDir)/temp/plugins/QuestMod" />
       <Exec Command="dotnet tool restore" />
