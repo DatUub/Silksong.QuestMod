@@ -21,6 +21,7 @@ namespace QuestMod
         public static Dictionary<string, int[]> MaxCaps { get; private set; } = new Dictionary<string, int[]>();
         public static Dictionary<string, string[]> ChecklistQuests { get; private set; } = new Dictionary<string, string[]>();
         public static HashSet<string> SequentialQuests { get; private set; } = new HashSet<string>();
+        public static Dictionary<string, string> SequentialStagePdPatterns { get; private set; } = new Dictionary<string, string>();
         public static HashSet<string> FarmableExcluded { get; private set; } = new HashSet<string>();
 
         public static int DefaultThreshold { get; private set; } = 17;
@@ -176,6 +177,16 @@ namespace QuestMod
                 {
                     var val = item.Value<string>();
                     if (val != null) SequentialQuests.Add(val);
+                }
+            }
+            var stagePatterns = root["sequentialStagePdPatterns"] as JObject;
+            if (stagePatterns != null)
+            {
+                foreach (var prop in stagePatterns)
+                {
+                    if (prop.Key.StartsWith("_")) continue;
+                    var val2 = prop.Value?.Value<string>();
+                    if (!string.IsNullOrEmpty(val2)) SequentialStagePdPatterns[prop.Key] = val2;
                 }
             }
         }

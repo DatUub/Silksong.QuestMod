@@ -17,7 +17,7 @@ namespace QuestMod
 
         static QuestDataAccess()
         {
-            compField = ReflectionCache.GetField(typeof(PlayerData), "QuestCompletionData");
+            compField = ReflectionCache.GetField(typeof(PlayerData), nameof(PlayerData.QuestCompletionData));
             if (compField != null)
             {
                 rtField = ReflectionCache.GetField(compField.FieldType, "RuntimeData");

@@ -35,6 +35,7 @@
   <ItemGroup>
     <Folder Remove="thunderstore/temp;thunderstore/dist" />
     <EmbeddedResource Include="Data\QuestCapabilities.json" />
+    <EmbeddedResource Include="Data\QuestRequirements.json" />
     <Compile Remove="BuildBundles.cs" />
   </ItemGroup>
 
