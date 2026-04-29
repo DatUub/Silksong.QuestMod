@@ -43,6 +43,17 @@ namespace QuestMod
                         }
                         canToggle = (i == nextUndone);
                     }
+                    // Cluster T: under Adjusted, also require that the
+                    // in-game encounter for this stage has happened. Stage N
+                    // is encountered iff its PD bool (from
+                    // QuestRegistry.SequentialStagePdPatterns) is true.
+                    // Pure leaves the toggle free so users can drive the
+                    // sequence manually.
+                    if (isSequential && canToggle && QuestModPlugin.IsAdjustedWishes
+                        && !QuestAcceptance.IsSequentialStageEncountered(questName, i))
+                    {
+                        canToggle = false;
+                    }
 
                     GUILayout.BeginHorizontal();
                     GUILayout.Space(12);

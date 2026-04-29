@@ -1,0 +1,161 @@
+{
+    "version": 1,
+    "_comment": "Embedded baseline. User overrides at BepInEx/config/QuestMod/QuestRequirements.user.json merge over this.",
+    "_whitelist_groups_comment": "playerDataWhitelist groups (in order): generic state, boss defeat (cluster R), boss encounter, NPC intro (met), area visit, items/abilities/milestones. Add new entries to the relevant section. JSON arrays cannot host keyed comments so groupings are by ordering only. static-verify.ps1 fails if any entry is not on PlayerData.",
+    "playerDataWhitelist": [
+        "silkRegenMax",
+        "blackThreadWorld",
+
+        "defeatedSongGolem",
+        "defeatedTrobbio",
+        "defeatedTormentedTrobbio",
+        "defeatedBellBeast",
+        "defeatedBroodMother",
+        "defeatedDockForemen",
+        "defeatedLastJudge",
+        "defeatedSplinterQueen",
+        "defeatedAntQueen",
+        "defeatedAntQueenAfterRedMemory",
+        "defeatedCoralKing",
+        "defeatedFlowerQueen",
+        "defeatedMossMother",
+        "defeatedFirstWeaver",
+        "defeatedLace1",
+        "defeatedLaceTower",
+        "defeatedSeth",
+        "defeatedCrowCourt",
+
+        "encounteredSongGolem",
+        "encounteredBellBeast",
+        "encounteredDockForemen",
+        "encounteredLastJudge",
+        "encounteredSplinterQueen",
+        "encounteredTrobbio",
+        "encounteredTormentedTrobbio",
+        "encounteredLace1",
+        "encounteredLaceTower",
+        "encounteredLaceBlastedBridge",
+
+        "metMapper",
+        "metAntQueenNPC",
+        "metGarmondAct3",
+        "metGrindleAct3",
+        "metLearnedPilgrimAct3",
+        "metGrubFarmerAct3",
+
+        "visitedFleatopia",
+        "visitedSlab",
+
+        "hasNeedolin",
+        "hasDoubleJump",
+        "hasSuperJump",
+        "bonebottomQuestBoardFixed",
+        "pinstressQuestReady",
+
+        "MushroomQuestFound1"
+    ],
+    "tags": {
+        "Brolly Get": ["farmable", "garb"],
+        "Pilgrim Rags": ["farmable", "garb"],
+        "Crow Feathers": ["farmable"],
+        "Fine Pins": ["farmable", "pin"],
+        "Roach Killing": ["farmable"],
+        "Song Pilgrim Cloaks": ["farmable", "garb"],
+        "Destroy Thread Cores": ["farmable"],
+        "Huntress Quest": ["farmable", "boss-adjacent"],
+        "Huntress Quest Runt": ["farmable", "boss-adjacent"],
+
+        "Mossberry Collection 1": ["unique", "world-limited"],
+        "Shell Flowers": ["unique", "world-limited"],
+        "Rock Rollers": ["unique", "world-limited"],
+        "Extractor Blue": ["unique", "world-limited"],
+        "Shiny Bell Goomba": ["unique", "world-limited"],
+
+        "Skull King": ["boss", "unique"],
+        "Beastfly Hunt": ["boss", "unique"],
+        "Broodmother Hunt": ["boss", "unique"],
+        "Ant Trapper": ["boss", "unique"],
+
+        "Building Materials": ["donate"],
+        "Building Materials (Bridge)": ["donate"],
+        "Building Materials (Statue)": ["donate"],
+        "Songclave Donation 1": ["donate"],
+        "Songclave Donation 2": ["donate"],
+
+        "A Pinsmiths Tools": ["pin", "unique"],
+        "Journal": ["unique", "world-limited"],
+        "Sprintmaster Race": ["unique"],
+        "Steel Sentinel": ["unique"]
+    },
+    "presets": {
+        "vanilla": {
+            "description": "No changes — fall through to slider values.",
+            "rules": []
+        },
+        "farmable-only": {
+            "description": "Halve farmable quest requirements; leave unique/world-limited items alone.",
+            "rules": [
+                {
+                    "match": { "anyTag": ["farmable"] },
+                    "scale": 0.5,
+                    "round": "ceil",
+                    "min": 1
+                }
+            ]
+        },
+        "farmable-quarter": {
+            "description": "Quarter farmable counts (aggressive), unique untouched.",
+            "rules": [
+                {
+                    "match": { "anyTag": ["farmable"] },
+                    "scale": 0.25,
+                    "round": "ceil",
+                    "min": 1
+                }
+            ]
+        },
+        "quick": {
+            "description": "Set every count to 1 except world-limited items.",
+            "rules": [
+                {
+                    "match": { "not": { "anyTag": ["world-limited"] } },
+                    "set": 1
+                }
+            ]
+        }
+    },
+    "perQuest": {
+        "_comment": "Per-quest overrides. extraConditions gate CompleteQuest; availableConditions gate IsAvailable under Adjusted (cluster R). Use for arena-reuse wishes that share a scene with another boss.",
+        "Beastfly Hunt": {
+            "availableConditions": [
+                {
+                    "kind": "playerData",
+                    "field": "defeatedSongGolem",
+                    "op": "==",
+                    "value": true
+                }
+            ]
+        },
+        "Tormented Trobbio": {
+            "availableConditions": [
+                {
+                    "kind": "playerData",
+                    "field": "defeatedTrobbio",
+                    "op": "==",
+                    "value": true
+                }
+            ]
+        },
+        "Mr Mushroom": {
+            "_comment": "Sequential quest. Mr Mushroom is encountered 7 times; vanilla shows the wish only after the first encounter. Gate Adjusted on MushroomQuestFound1 so the wish does not appear pre-encounter (player would have nothing to progress against).",
+            "availableConditions": [
+                {
+                    "kind": "playerData",
+                    "field": "MushroomQuestFound1",
+                    "op": "==",
+                    "value": true
+                }
+            ]
+        }
+    }
+}

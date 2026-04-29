@@ -324,6 +324,39 @@ namespace QuestMod
             return false;
         }
 
+        /// <summary>
+        /// Writes a target count directly to the FullQuestBase struct WITHOUT
+        /// persisting it to QuestTargetOverrides save data. Used for runtime-only
+        /// adjustments (e.g. All Wishes Mode bypassing tool-gate targets) that
+        /// should not stick when the user toggles the mode off and reloads.
+        /// Reapplied each scene load by the caller.
+        /// </summary>
+        public static bool SetTargetCountTransient(string questName, int targetIndex, int newCount)
+        {
+            if (!IsInitialized) return false;
+            if (cachedQuests == null) CacheQuests();
+            if (cachedQuests == null || countField == null) return false;
+
+            newCount = ClampCount(questName, targetIndex, newCount);
+
+            foreach (var quest in cachedQuests)
+            {
+                if (quest.name != questName) continue;
+
+                var arr = GetTargetsArray(quest);
+                if (arr == null || targetIndex >= arr.Length) return false;
+
+                var target = arr.GetValue(targetIndex);
+                countField.SetValue(target, newCount);
+                arr.SetValue(target, targetIndex);
+
+                QuestModPlugin.LogDebugInfo($"[Transient] Set {questName} target[{targetIndex}] count to {newCount}");
+                return true;
+            }
+
+            return false;
+        }
+
         public static void SetAllTargetCounts(string questName, int newCount)
         {
             if (!IsInitialized) return;
@@ -415,6 +448,11 @@ namespace QuestMod
             }
 
             QuestModPlugin.Log.LogInfo($"Applied {applied} saved quest target overrides");
+
+            // Layered rules: presets + per-quest overrides apply *after* slider-touched values.
+            // Slider-touched targets are skipped inside ApplyActivePreset so user edits win.
+            if (QuestModPlugin.IsCustomRequirementsEnabled)
+                QuestRequirements.ApplyActivePreset();
         }
 
 

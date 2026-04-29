@@ -1,19 +1,31 @@
 # QuestMod
 
 A BepInEx mod for Hollow Knight: Silksong that gives you full control over the quest (wish) system — unlock, accept, complete, rewind, and tweak quest targets from an in-game GUI.
-
 ## Features
 
-- **Quest State Control** — Accept, complete, un-accept, or un-complete any quest
-- **Chain Quest Grouping** — Multi-step quest chains (Main Story, Citadel, etc.) collapsed into single rows with ◀/▶ step navigation
-- **Per-Save "All Quests" Mode** — Unlock all quests on boards and NPCs for the current save (resets on title screen)
-- **Target Count Overrides** — Edit quest completion targets (e.g. lower Silver Bells from 8 → 3) with per-target sliders, QoL presets, and a multiplier slider
-- **Checklist Toggles** — Toggle individual sub-targets for multi-target quests (Grand Gate bellshrines, Flea Games, etc.)
-- **Silk & Soul Tab** — Edit threshold requirements, quest point values, and track completion progress
-- **Mass Operations** — Accept All / Complete All with undo support (gated behind config)
-- **Guaranteed Silver Bells** — Force every bell drop to be a Silver Bell (overrides the 75/25 split)
-- **Quest Item Protection** — Prevent delivery quest items from being destroyed by enemy attacks
-- **Act 3 Toggle** — Manually toggle Black Thread World state
+### Core
+- **All Wishes Mode** -- three way Disabled / Adjusted / Pure selector. Adjusted bypasses act and NPC prereqs but keeps chain ordering, mutually exclusive twin gating, and edge case fixes (recommended). Pure exposes every wish raw with no protection (Advanced gated). Disabled is vanilla.
+- **Save safety gate** -- destructive features only fire on saves QuestMod created or saves the user explicitly opts in via override-with-confirm. Legacy saves stay vanilla.
+- **Quest state control** -- accept, complete, un-accept, un-complete any quest
+- **Remote complete wishes** -- per save toggle. When ON, the per quest Complete button mirrors the NPC dialogue: deducts required items, grants the reward, cascades dependent quests, and shows the toast.
+- **Chain quest grouping** -- multi step chains (Main Story, Citadel, etc.) collapse into rows with step navigation
+- **Mass operations** -- Accept Available / Complete Available with undo (force variants gated behind a dev flag)
+
+### Customization
+- **Custom requirements** -- four built in presets (vanilla, farmable-only, farmable-quarter, quick) plus per quest extra and available conditions. User overlay at `BepInEx/config/QuestMod/QuestRequirements.user.json`.
+- **In GUI tag editor** -- author the cluster I tag taxonomy via per quest pills, one click adds, custom input
+- **Per quest Available + AutoAccept** policies with bulk reset
+- **Granular prereq bypasses** (per save) -- Fleatopia, Mandatory Wishes, Faydown Cloak, Needolin, Bonebottom Quest Board, plus a blanket Quest Boards Always Available toggle that opens all three wishwalls (Bone Bottom, Bellhart, Songclave) without flipping any story PD bools
+- **Target count overrides** -- per target sliders, QoL presets, multiplier slider
+- **Checklist toggles** -- per target toggle UI for multi target quests; sequential quests respect per stage encounter gating under Adjusted
+
+### Quality of life
+- **Silk & Soul tab** -- threshold editor, quest point values, completion tracker
+- **Delivery tab** -- separate panel for courier quests with Gourmand timer freeze and quest item invincibility toggles
+- **Save state import / export** -- Copy / Paste your QuestMod save state via clipboard for sharing or backup
+- **Toast notifications** for mode changes, auto accept counts, etc.
+- **Guaranteed Silver Bells** -- force every bell drop to a Silver Bell
+- **Act 3 toggle** -- manually toggle Black Thread World state
 ## Installation
 
 ### Via Thunderstore (recommended)
@@ -71,18 +83,17 @@ Found in `BepInEx/config/com.silkmod.questmod.cfg`, or via the **Tools** tab in 
 
 | Tab | Description |
 |-----|-------------|
-| **Quests** | Chain quests grouped with ◀/▶ step controls; standalone quests with accept/complete buttons |
-| **Targets** | Per-target count overrides with multiplier slider and QoL presets (Set to 1, Half, Default) |
-| **Checklist** | Per-target toggle UI for multi-target quests |
-| **Silk & Soul** | Threshold editor, quest point values, and completion tracker |
-| **Tools** | Mode toggles, mass operations, Act 3 toggle, and data dumps |
+| **Quests** | Chain quests grouped with step controls; standalone quests with accept / complete / drop / undo buttons; per quest Available + AutoAccept toggles |
+| **Targets** | Per target count overrides with multiplier slider and QoL presets (Set to 1, Half, Default) |
+| **Delivery** | Courier quests + Great Gourmand controls (timer freeze, item invincibility) |
+| **Checklist** | Per target toggle UI for multi target quests; sequential quests respect per stage encounter gating under Adjusted |
+| **Silk & Soul** | Threshold editor, quest point values, completion tracker |
+| **Tags** | In GUI editor for the cluster I tag taxonomy (writes to user overlay) |
+| **Tools** | All Wishes Mode selector, save safety gate, mass operations, save state I/O, granular prereq bypasses, custom requirements toggle |
 
 ## Known Issues
 
-- Plasmium quests cannot be completed without the Needle Phial in All Wishes Mode
-- Shakra does not appear when Trail's End is active in All Wishes Mode
-- Junilana has missing NPC behavior in All Wishes Mode
-- Mr Mushroom may not spawn at later locations in All Wishes Mode
+- Quest Boards Always Available may show the Fixer NPC briefly hammering until the FSM rewrite sweep catches him on player approach (Silksong loads the NPC FSM via Addressables, so the sweep retries every two seconds for thirty seconds after each scene load); the kiosk itself is interactable regardless
 
 ## Changelog
 

@@ -149,6 +149,10 @@
     "sequentialQuests": [
         "Mr Mushroom"
     ],
+    "sequentialStagePdPatterns": {
+        "_comment": "Pattern uses {stage} as a 1-indexed placeholder. Stage N is encountered iff PD field with stage=N is true.",
+        "Mr Mushroom": "MushroomQuestFound{stage}"
+    },
     "chains": {
         "Main Story": {
             "display": "Main Story",
@@ -660,6 +664,18 @@
                         "count": 1
                     }
                 ]
+            },
+            "Tormented Trobbio": {
+                "display": "Tormented Trobbio",
+                "type": "count",
+                "act": 3,
+                "targets": [
+                    {
+                        "name": "Trobbio Remains",
+                        "count": 1
+                    }
+                ],
+                "_comment": "Added 2026-04-26 via static-verify finding (registry has Tormented Trobbio but capabilities did not). Target name is a guess; refine when verified."
             }
         },
         "Donate": {
