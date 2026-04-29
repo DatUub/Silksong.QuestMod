@@ -1,5 +1,15 @@
 # Changelog
 
+## v2.0.1: Dependency bumps
+
+Compiled against the current Silksong runtime and the latest helper packages, so the Thunderstore install pulls newer dependency versions automatically. No code changes from 2.0.0.
+
+- `Silksong.GameLibs` 1.0.29315 -> 1.0.30000 (matches the current Silksong build).
+- `silksong_modding-DataManager` 1.2.1 -> 1.2.2.
+- `silksong_modding-FsmUtil` 0.3.13 -> 0.3.16.
+- `silksong_modding-UnityHelper` 1.1.1 -> 1.2.0.
+- `softprops/action-gh-release` 2 -> 3 in the publish workflow.
+
 ## v2.0.0: Wishes Overhaul
 
 Big one. Rewrites the entire All Wishes Mode plumbing, ships full quest customization (rules engine with presets, tags, and per quest policies), opens up all three wishwalls, lets you complete wishes from anywhere, fixes the four open NPC bugs, and adds a save safety gate so legacy saves never get touched without explicit opt in.
