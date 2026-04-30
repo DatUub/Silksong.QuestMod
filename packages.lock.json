@@ -81,9 +81,9 @@
       },
       "UnityEngine.Modules": {
         "type": "Direct",
-        "requested": "[6000.0.50, )",
-        "resolved": "6000.0.50",
-        "contentHash": "hEFz1r4NGzeYXPY2yPh+/btcnwVB6EnEeRjDMCVNi19PD7VvRMvJeu46x1dNH9jYkT0B/ZXuyMBYiuI7YlRnKw=="
+        "requested": "[6000.4.5, )",
+        "resolved": "6000.4.5",
+        "contentHash": "4w/yBgUjEmODF6oQCdnSo4+iBzJKfs0bs8uw6dW60Zmva8GUkzv3XfaenJ2UQ4n60Y2QJjhRN85bKW/nc1NTSA=="
       },
       "BepInEx.BaseLib": {
         "type": "Transitive",
