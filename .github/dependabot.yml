@@ -1,0 +1,34 @@
+version: 2
+updates:
+  # Monitor NuGet package dependencies
+  - package-ecosystem: "nuget"
+    directory: "/"
+    schedule:
+      interval: "daily"
+      time: "04:00"
+      timezone: "America/New_York"
+    open-pull-requests-limit: 10
+    groups:
+      silksong-packages:
+        patterns:
+          - "Silksong.*"
+      bepinex-packages:
+        patterns:
+          - "BepInEx.*"
+          - "Hamunii.BepInEx.*"
+      system-packages:
+        patterns:
+          - "System.*"
+          - "Microsoft.*"
+    ignore:
+      - dependency-name: "HarmonyX"
+      - dependency-name: "MonoMod.*"
+
+  # Monitor GitHub Actions versions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "daily"
+      time: "04:00"
+      timezone: "America/New_York"
+    open-pull-requests-limit: 5

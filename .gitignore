@@ -1,0 +1,12 @@
+bin/
+obj/
+*.user
+*.suo
+.vs/
+*.DotSettings.user
+dumps/
+SilksongPath.props
+thunderstore/temp/
+thunderstore/dist/
+.agent/TODO.md
+C:
