@@ -25,7 +25,7 @@ namespace QuestMod
 
         private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
         {
-            if (string.IsNullOrEmpty(scene.name) || scene.name == "Menu_Title")
+            if (QuestModConstants.IsTransientMenuScene(scene.name))
                 return;
 
             QuestModPlugin.SyncFromSaveData();
@@ -214,7 +214,9 @@ namespace QuestMod
                 if (fsm.gameObject.GetComponent<SceneAdditiveLoadConditional>() != null)
                     continue;
 
-
+                // Skip pre-init FSMs. Touching FsmStates lazy-inits ActionData
+                // and NPEs when the underlying Fsm hasn't been wired yet.
+                if (fsm.Fsm == null) continue;
 
                 try
                 {
@@ -567,12 +569,16 @@ namespace QuestMod
             if (!AnyQuestAvailable()) return;
 
             QuestModPlugin.Log.LogInfo("=== NPC Diagnostics ===");
-            var fsms = Object.FindObjectsByType<PlayMakerFSM>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            // Active-only sweep. Walking inactive FSMs forces PlayMaker lazy
+            // init on uninitialized ActionData and floods the log with
+            // 'state.Fsm == null' noise. Dormant NPCs aren't useful to dump
+            // anyway since they can't be inspected live.
+            var fsms = Object.FindObjectsByType<PlayMakerFSM>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
             foreach (var fsm in fsms)
             {
                 if (fsm == null) continue;
-                // Walk every FSM; inner loop filters by action name.
-
+                if (fsm.Fsm == null) continue;
+                if (!fsm.gameObject.activeInHierarchy) continue;
 
                 try
                 {

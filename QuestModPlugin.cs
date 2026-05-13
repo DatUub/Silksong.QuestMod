@@ -165,6 +165,7 @@ namespace QuestMod
             }
         }
         public static bool AllQuestsAccepted { get; private set; }
+        public static bool AutoAcceptAllAvailable { get; private set; }
 
         // IsQuestModSave: save was created with QuestMod or used destructive features.
         // IsSafetyOverridden: user confirmed past the gate. One-way ratchet.
@@ -177,6 +178,7 @@ namespace QuestMod
             if (d == null) return false;
             if (d.AllWishesMode != AllWishesMode.Disabled) return true;
             if (d.AllQuestsAccepted) return true;
+            if (d.AutoAcceptAllAvailable) return true;
             if (d.AllQuestsAvailable) return true;
             if (d.QuestPolicies != null && d.QuestPolicies.Count > 0) return true;
             if (d.InjectedQuests != null && d.InjectedQuests.Count > 0) return true;
@@ -258,6 +260,23 @@ namespace QuestMod
             SyncToSaveData();
         }
 
+        public static void SetAutoAcceptAllAvailable(bool value)
+        {
+            AutoAcceptAllAvailable = value;
+            // Only acts in Adjusted/Pure -- prompt the coupling so a fresh
+            // Disabled save doesn't toggle this and see nothing happen.
+            if (value && WishesMode == AllWishesMode.Disabled)
+            {
+                WishesMode = AllWishesMode.Adjusted;
+                LastWishesModeChange = AllWishesMode.Adjusted;
+                LastWishesModeChangeRealtime = Time.realtimeSinceStartup;
+                Log?.LogInfo("AutoAcceptAllAvailable=true also enabled WishesMode=Adjusted (required coupling)");
+                QuestModToast.Show("Auto-Accept Available also enabled Adjusted mode",
+                    new UnityEngine.Color(0.7f, 0.85f, 1f), 4f);
+            }
+            SyncToSaveData();
+        }
+
         // Live GranularPrereqs accessor. null if no save.
         public static GranularPrereqs? Prereqs
         {
@@ -315,8 +334,9 @@ namespace QuestMod
             if (data == null) return;
             WishesMode = data.AllWishesMode;
             AllQuestsAccepted = data.AllQuestsAccepted;
+            AutoAcceptAllAvailable = data.AutoAcceptAllAvailable;
             if (data.Prereqs == null) data.Prereqs = new GranularPrereqs();
-            LogDebugInfo($"SyncFromSave: WishesMode={WishesMode}, Accepted={AllQuestsAccepted}");
+            LogDebugInfo($"SyncFromSave: WishesMode={WishesMode}, Accepted={AllQuestsAccepted}, AutoAcceptAvail={AutoAcceptAllAvailable}");
         }
 
         private static void SyncToSaveData()
@@ -328,10 +348,11 @@ namespace QuestMod
             // Legacy bool in sync.
             data.AllQuestsAvailable = WishesMode != AllWishesMode.Disabled;
             data.AllQuestsAccepted = AllQuestsAccepted;
+            data.AutoAcceptAllAvailable = AutoAcceptAllAvailable;
             // Never touch QuestModInitialized here -- only StartNewGame or
             // grandfathering can flip it. Otherwise legacy saves would
             // bypass the safety gate on first toggle.
-            LogDebugInfo($"SyncToSave: WishesMode={WishesMode}, Accepted={AllQuestsAccepted}");
+            LogDebugInfo($"SyncToSave: WishesMode={WishesMode}, Accepted={AllQuestsAccepted}, AutoAcceptAvail={AutoAcceptAllAvailable}");
         }
         public static ConfigEntry<bool> EnableCompletionOverrides { get; private set; } = null!;
         public static ConfigEntry<bool> OnlyDiscoveredQuests { get; private set; } = null!;
@@ -637,6 +658,7 @@ namespace QuestMod
             // Wipe static state so slot A doesn't leak into slot B.
             WishesMode = AllWishesMode.Disabled;
             AllQuestsAccepted = false;
+            AutoAcceptAllAvailable = false;
             LastWishesModeChange = AllWishesMode.Disabled;
             LastWishesModeChangeRealtime = -1f;
             _saveData = new QuestModSaveData();

@@ -32,6 +32,12 @@ namespace QuestMod
 
         public bool AllQuestsAccepted { get; set; }
 
+        // Auto-accept any wish that passes IsActuallyAvailable on scene load.
+        // Respects Adjusted's chain/exclusion/availableConditions gates -- unlike
+        // AllQuestsAccepted which dumps the whole registry in regardless.
+        // Only acts when WishesMode is Adjusted or Pure.
+        public bool AutoAcceptAllAvailable { get; set; }
+
         public Dictionary<string, QuestPolicy> QuestPolicies { get; set; } = new();
 
         public GranularPrereqs Prereqs { get; set; } = new();

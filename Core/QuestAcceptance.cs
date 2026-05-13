@@ -211,22 +211,27 @@ namespace QuestMod
             if (rt == null) return;
 
             int accepted = 0;
+            var seen = new System.Collections.Generic.HashSet<string>();
+
+            // Per-quest flagged path. Works in any mode -- IsActuallyAvailable
+            // short-circuits in Pure, gates in Adjusted, gates in Disabled too
+            // (which is fine: a per-quest opt-in is explicit).
             foreach (var name in QuestPolicyStore.AutoAcceptNames())
             {
-                if (string.IsNullOrEmpty(name)) continue;
-                if (QuestRegistry.ExcludedQuests.Contains(name)) continue;
-                // Full gate set. Force* paths skip this on purpose.
-                if (!IsActuallyAvailable(name)) continue;
+                if (TryAutoAcceptOne(name, rt, seen)) accepted++;
+            }
 
-                if (rt.Contains(name))
+            // Global "accept everything Adjusted considers available" path.
+            // Only meaningful in Adjusted/Pure -- Disabled would let unlocked
+            // gates through that the vanilla game wouldn't yet offer.
+            if (QuestModPlugin.AutoAcceptAllAvailable
+                && QuestModPlugin.WishesMode != AllWishesMode.Disabled)
+            {
+                foreach (var quest in Resources.FindObjectsOfTypeAll<FullQuestBase>())
                 {
-                    var existing = rt[name];
-                    if (QuestDataAccess.IsAccepted(existing) || QuestDataAccess.IsCompleted(existing))
-                        continue;
+                    if (quest == null) continue;
+                    if (TryAutoAcceptOne(quest.name, rt, seen)) accepted++;
                 }
-
-                AcceptQuest(name);
-                accepted++;
             }
 
             if (accepted > 0)
@@ -235,6 +240,25 @@ namespace QuestMod
                 // Toast so the player sees what the mod just did.
                 QuestModToast.Show($"Auto-accepted {accepted} quest" + (accepted == 1 ? "" : "s"));
             }
+        }
+
+        private static bool TryAutoAcceptOne(string name, System.Collections.IDictionary rt, System.Collections.Generic.HashSet<string> seen)
+        {
+            if (string.IsNullOrEmpty(name)) return false;
+            if (!seen.Add(name)) return false;
+            if (QuestRegistry.ExcludedQuests.Contains(name)) return false;
+            // Full gate set. Force* paths skip this on purpose.
+            if (!IsActuallyAvailable(name)) return false;
+
+            if (rt.Contains(name))
+            {
+                var existing = rt[name];
+                if (QuestDataAccess.IsAccepted(existing) || QuestDataAccess.IsCompleted(existing))
+                    return false;
+            }
+
+            AcceptQuest(name);
+            return true;
         }
 
         public static void ForceAcceptAllQuests() => ForceAllQuestsOp(complete: false);

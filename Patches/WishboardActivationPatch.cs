@@ -120,7 +120,7 @@ namespace QuestMod
 
         private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
         {
-            if (string.IsNullOrEmpty(scene.name) || scene.name == "Menu_Title")
+            if (QuestModConstants.IsTransientMenuScene(scene.name))
                 return;
 
             // Two-shot after scene Start()s settle. Stale sweeps bail.

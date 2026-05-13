@@ -14,5 +14,20 @@ namespace QuestMod
         public const int GuiWindowId = 12345;
         public const float ConfirmArmWindow = 4f;
         public const float ModeChangeHintDurationSec = 12f;
+
+        // Pre-gameplay scenes where FSMs aren't initialized yet. Sweeps that
+        // FindObjectsByType(FindObjectsInactive.Include) here trigger PlayMaker
+        // lazy init and NPE on state.Fsm. Prefix match catches Pre_Menu_Intro,
+        // Pre_Menu_Loader, etc. without needing to enumerate every variant.
+        public static bool IsTransientMenuScene(string sceneName)
+        {
+            if (string.IsNullOrEmpty(sceneName)) return true;
+            if (sceneName.StartsWith("Pre_Menu_", System.StringComparison.Ordinal)) return true;
+            return sceneName == "Menu_Title"
+                || sceneName == "Quit_To_Menu"
+                || sceneName == "Opening_Sequence"
+                || sceneName == "PermaDeath"
+                || sceneName == "PermaDeath_Unlocked";
+        }
     }
 }

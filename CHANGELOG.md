@@ -1,5 +1,19 @@
 # Changelog
 
+## v2.1.2
+
+New toggle: **Auto-Accept Available** (Quests tab header). When on, every scene load accepts any wish where `IsActuallyAvailable()` passes -- respects Adjusted's full chain prereq + exclusion + availableConditions gating. Unlike Accept All, story-locked wishes only accept once their gate naturally unlocks, so chain ordering stays coherent. Toggling on auto-flips Disabled -> Adjusted (same coupling as Accept All). Skipped on legacy saves without the safety override.
+
+Quieted DumpNpcDiagnostics: `FindObjectsInactive.Exclude` + `activeInHierarchy` filter. Walking inactive FSMs with `state.Actions` was forcing PlayMaker lazy init on uninitialized ActionData and producing thousands of `state.Fsm == null` log lines per scene when DebugLogging was on. Dump now only covers live NPCs.
+
+## v2.1.1
+
+Hotfix for the FSM cascade flood introduced in 2.1.0.
+
+- Scene-load hooks now bail on `Pre_Menu_Loader` and `Quit_To_Menu` in addition to `Menu_Title`. The 2.1.0 sweeps fired on `Pre_Menu_Loader` and ran `FindObjectsByType<PlayMakerFSM>(FindObjectsInactive.Include)` plus `ForceActivateRecursive` on dormant FSM components, which lazy-init'd `ActionData` while `state.Fsm` was still null and produced thousands of `state.Fsm == null` + NullReferenceException errors per session, hanging save loads.
+- `IsTransientMenuScene` helper centralizes the blocklist so a future scene-name surprise only needs one edit.
+- Defense-in-depth `fsm.Fsm == null` guards added before any `fsm.FsmStates` access in `QuestStateHooks.PatchAllQuestFSMs`, `QuestStateHooks.DumpNpcDiagnostics`, and `WishwallFsmPatch.SweepOnce` so a partially-initialized FSM is skipped instead of triggering the lazy-init NPE.
+
 ## v2.1.0
 
 Big bug pass. No new gameplay features, every change is making something that already exists actually work like it's supposed to.

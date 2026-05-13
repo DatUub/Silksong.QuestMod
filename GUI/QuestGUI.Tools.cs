@@ -108,6 +108,7 @@ namespace QuestMod
                         if (sd.Prereqs.BypassAllWishwalls) { sd.Prereqs.BypassAllWishwalls = false; cleared++; }
                     }
                     if (sd.AllQuestsAccepted) { sd.AllQuestsAccepted = false; cleared++; }
+                    if (sd.AutoAcceptAllAvailable) { sd.AutoAcceptAllAvailable = false; cleared++; }
                     int policyCount = sd.QuestPolicies?.Count ?? 0;
                     sd.QuestPolicies?.Clear();
                     cleared += policyCount;
@@ -222,6 +223,20 @@ namespace QuestMod
             bool newAllAccepted = GUILayout.Toggle(allAccepted,
                 new GUIContent("All Quests Accepted", "Auto-inject and accept every quest each scene load. Forces All Wishes Mode → Adjusted."));
             if (newAllAccepted != allAccepted) QuestModPlugin.SetAllQuestsAccepted(newAllAccepted);
+
+            // Adjusted-respecting variant. Only accepts wishes that pass the
+            // full IsActuallyAvailable gate, so chain order stays coherent.
+            bool autoAvail = QuestModPlugin.AutoAcceptAllAvailable;
+            bool autoAvailGated = !QuestModPlugin.AreDestructiveFeaturesAllowed;
+            GUI.enabled = !autoAvailGated;
+            bool newAutoAvail = GUILayout.Toggle(autoAvail,
+                new GUIContent("Auto-Accept Available",
+                    "Each scene load, accept any wish where IsActuallyAvailable() passes.\n" +
+                    "Respects chain prereqs, exclusion conflicts, and availableConditions.\n" +
+                    "Only acts in Adjusted/Pure. Toggling on auto-flips Disabled → Adjusted.\n" +
+                    "Unlike All Quests Accepted, story-locked wishes only accept once their gate unlocks."));
+            GUI.enabled = true;
+            if (newAutoAvail != autoAvail && !autoAvailGated) QuestModPlugin.SetAutoAcceptAllAvailable(newAutoAvail);
 
             // Disabled / Pure / Adjusted selector.
             GUI.enabled = !allAccepted;

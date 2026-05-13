@@ -55,7 +55,7 @@ namespace QuestMod
 
         private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
         {
-            if (string.IsNullOrEmpty(scene.name) || scene.name == "Menu_Title") return;
+            if (QuestModConstants.IsTransientMenuScene(scene.name)) return;
             _patchedActions.Clear();
             // 30s window catches Addressables-loaded NPCs. Stale sweeps bail.
             string queuedScene = scene.name;
@@ -78,7 +78,7 @@ namespace QuestMod
 
             foreach (var fsm in fsms)
             {
-                if (fsm == null || fsm.FsmStates == null) continue;
+                if (fsm == null || fsm.Fsm == null || fsm.FsmStates == null) continue;
                 if (!LooksLikeWishwallBuilder(fsm)) continue;
                 if (PatchFsm(fsm, allWishwalls, bonebottomOnly)) patched++;
             }

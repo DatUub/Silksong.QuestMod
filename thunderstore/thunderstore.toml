@@ -4,7 +4,7 @@ schemaVersion = "0.0.1"
 [package]
 namespace = "DatUub"
 description = "Quest management mod for Silksong — accept, complete, and customize quest targets with a full debug GUI."
-version = "2.1.0"
+version = "2.1.2"
 websiteUrl = "https://github.com/DatUub/Silksong.QuestMod"
 containsNsfwContent = false
 

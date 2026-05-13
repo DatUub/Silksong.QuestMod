@@ -14,7 +14,7 @@ namespace QuestMod
 
         private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
         {
-            if (string.IsNullOrEmpty(scene.name) || scene.name == "Menu_Title")
+            if (QuestModConstants.IsTransientMenuScene(scene.name))
                 return;
 
             string queuedScene = scene.name;
