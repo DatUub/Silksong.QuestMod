@@ -27,7 +27,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Silksong.FsmUtil" Version="0.3.16" />
+    <PackageReference Include="Silksong.FsmUtil" Version="0.3.17" />
     <PackageReference Include="Silksong.DataManager" Version="1.2.2" />
     <PackageReference Include="Silksong.UnityHelper" Version="1.2.0" />
   </ItemGroup>
