@@ -238,6 +238,23 @@ namespace QuestMod
             GUI.enabled = true;
             if (newAutoAvail != autoAvail && !autoAvailGated) QuestModPlugin.SetAutoAcceptAllAvailable(newAutoAvail);
 
+            // Per-save Remote Complete — drives Quests-tab Complete button behaviour.
+            bool rc = QuestModPlugin.IsFullRemoteCompleteEnabled;
+            bool newRc = GUILayout.Toggle(rc,
+                new GUIContent("Remote Complete (per-quest Complete)",
+                    "When ON, Complete mirrors NPC turn-in (deduct items, grant rewards, cascade).\n" +
+                    "When OFF, Complete only flips QuestData flags — minigames and world state stay unchanged.\n" +
+                    "Flea carnival (Ecstasy of the End): flag-only Complete is blocked; play in-world. Remote Complete may still not drive minigame scores.\n" +
+                    "Already flag-completed by mistake? Quests tab → Done filter → Undo Complete."));
+            if (newRc != rc) QuestModPlugin.IsFullRemoteCompleteEnabled = newRc;
+            if (!rc)
+            {
+                GUI.color = new Color(0.85f, 0.8f, 0.55f);
+                GUILayout.Label(
+                    "Flag-only mode: minigame/world wishes (e.g. Ecstasy of the End) refuse Complete. Use Done → Undo Complete to reverse a mistaken flag complete.");
+                GUI.color = Color.white;
+            }
+
             // Disabled / Pure / Adjusted selector.
             GUI.enabled = !allAccepted;
 
@@ -299,13 +316,9 @@ namespace QuestMod
                     "across reloads on its own. The toggle stays in mod config and re-applies each scene load.");
             }
 
-            GUILayout.Space(8);
-            if (PlayerData.instance != null)
-            {
-                bool act3 = PlayerData.instance.blackThreadWorld;
-                bool newAct3 = GUILayout.Toggle(act3, "Act 3 (Black Thread World)");
-                if (newAct3 != act3) PlayerData.instance.blackThreadWorld = newAct3;
-            }
+            // Act 3 PD flip is intentionally not exposed in the main Tools UI —
+            // one-click story-state nukes caused more support pain than value.
+            // Force mass-ops remain under Advanced > DevForceOperations.
 
             DrawGranularPrereqsSection();
             DrawCustomRequirementsSection();
@@ -517,7 +530,7 @@ namespace QuestMod
             {
                 GUI.color = new Color(1f, 0.85f, 0.4f);
                 GUILayout.Label(new GUIContent("Unsaved changes",
-                    "You changed save data or tags since opening this panel. Click Save Changes to commit, or close the panel without saving to revert."),
+                    "You changed save data or custom rules since opening this panel. Click Save Changes to commit, or close the panel without saving to revert."),
                     QuestGUISkin.SectionHeader);
                 GUI.color = Color.white;
             }
@@ -536,13 +549,13 @@ namespace QuestMod
                 MarkSaveExplicit();
             }
             if (GUILayout.Button(new GUIContent("Discard",
-                "Roll back save data and tags to the state at panel open."),
+                "Roll back save data and custom rules to the state at panel open."),
                 GUILayout.Width(80)))
             {
                 if (_uiOpenSnapshotSaveData != null)
                     QuestModPlugin.ImportSaveDataFromJson(_uiOpenSnapshotSaveData);
-                if (_uiOpenSnapshotTags != null)
-                    QuestRequirements.ImportTagsJson(_uiOpenSnapshotTags);
+                if (_uiOpenSnapshotRules != null)
+                    QuestRequirements.ImportRulesJson(_uiOpenSnapshotRules);
                 questListDirty = true;
                 QuestModToast.Show("Discarded changes", new Color(0.9f, 0.7f, 0.4f), 2.5f);
             }

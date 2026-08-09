@@ -21,32 +21,12 @@ namespace QuestMod
             string boolName = inst.boolName ?? "";
             string goName = inst.gameObject != null ? inst.gameObject.name : "";
             string targetName = inst.objectToActivate != null ? inst.objectToActivate.name : "";
-            return goName.IndexOf("wishwall", System.StringComparison.OrdinalIgnoreCase) >= 0
-                || goName.IndexOf("wish_wall", System.StringComparison.OrdinalIgnoreCase) >= 0
-                || goName.IndexOf("questboard", System.StringComparison.OrdinalIgnoreCase) >= 0
-                || goName.IndexOf("quest_board", System.StringComparison.OrdinalIgnoreCase) >= 0
-                || targetName.IndexOf("wishwall", System.StringComparison.OrdinalIgnoreCase) >= 0
-                || targetName.IndexOf("wish_wall", System.StringComparison.OrdinalIgnoreCase) >= 0
-                || targetName.IndexOf("questboard", System.StringComparison.OrdinalIgnoreCase) >= 0
-                || targetName.IndexOf("quest_board", System.StringComparison.OrdinalIgnoreCase) >= 0
+            return WishboardSceneSweep.NameLooksLikeWishwall(goName, targetName)
                 || string.Equals(boolName, WishboardBoolName, System.StringComparison.Ordinal);
         }
 
-        // Never force-activate damaged/post-game variants -- they'd mis-tell story state.
-        internal static readonly string[] WishwallExcludeSubstrings = new[]
-        {
-            "broken", "destroyed", "damaged", "ruined",
-            "skull king", "skullking",
-        };
-
         internal static bool IsExcludedWishwall(string name)
-        {
-            if (string.IsNullOrEmpty(name)) return false;
-            string l = name.ToLowerInvariant();
-            foreach (var ex in WishwallExcludeSubstrings)
-                if (l.Contains(ex)) return true;
-            return false;
-        }
+            => WishboardSceneSweep.IsExcludedWishwallName(name);
 
         public static void Postfix(ActivateIfPlayerdataTrue __instance)
         {
@@ -112,6 +92,42 @@ namespace QuestMod
             "scaffold", "construction",
         };
 
+        internal static bool NameLooksLikeWishwall(params string[] names)
+        {
+            if (names == null) return false;
+            foreach (var name in names)
+            {
+                if (string.IsNullOrEmpty(name)) continue;
+                foreach (var p in WishwallGoNamePatterns)
+                {
+                    if (name.IndexOf(p, System.StringComparison.OrdinalIgnoreCase) >= 0)
+                        return true;
+                }
+            }
+            return false;
+        }
+
+        internal static bool IsExcludedWishwallName(string name)
+        {
+            if (string.IsNullOrEmpty(name)) return false;
+            string l = name.ToLowerInvariant();
+            foreach (var ex in WishwallExcludePatterns)
+                if (l.Contains(ex)) return true;
+            return false;
+        }
+
+        private static bool IsBonebottomQuestBoard(params string[] names)
+        {
+            if (names == null) return false;
+            foreach (var name in names)
+            {
+                if (string.IsNullOrEmpty(name)) continue;
+                if (name.IndexOf("bonebottom_quest_board", System.StringComparison.OrdinalIgnoreCase) >= 0)
+                    return true;
+            }
+            return false;
+        }
+
         public static void Initialize()
         {
             SceneManager.sceneLoaded += OnSceneLoaded;
@@ -136,38 +152,60 @@ namespace QuestMod
             bool allWishwalls = QuestModPlugin.Instance?.SaveData?.Prereqs?.BypassAllWishwalls == true;
             if (!bonebottomOnly && !allWishwalls) return;
 
-            var gates = Object.FindObjectsByType<ActivateIfPlayerdataTrue>(
-                FindObjectsInactive.Include, FindObjectsSortMode.None);
+            int forced = SweepActivateIfPlayerdataTrue(bonebottomOnly, allWishwalls);
+            int forcedTga = SweepTestGameObjectActivator(bonebottomOnly, allWishwalls);
 
-            int forced = 0;
-            foreach (var gate in gates)
+            if (forced > 0 || forcedTga > 0)
+                QuestModPlugin.Log.LogInfo(
+                    $"WishboardSceneSweep: activated {forced} ActivateIfPDTrue + {forcedTga} TestGameObjectActivator gate(s)");
+
+            // Second pass: recursively activate descendants of wishwall ROOTs.
+            // Catches children SetActive(false) at scene-build time.
+            int activatedGos = 0;
+            if (allWishwalls)
             {
-                if (gate == null) continue;
+                var transforms = Object.FindObjectsByType<Transform>(
+                    FindObjectsInactive.Include, FindObjectsSortMode.None);
+                // Dedupe roots+descendants so name-matching children don't get walked twice.
+                var visited = new System.Collections.Generic.HashSet<int>();
+                foreach (var t in transforms)
+                {
+                    if (t == null || t.gameObject == null) continue;
+                    var go = t.gameObject;
+                    if (!go.scene.IsValid() || go.scene.name == "DontDestroyOnLoad") continue;
+
+                    string name = go.name ?? "";
+                    if (!NameLooksLikeWishwall(name)) continue;
+                    if (IsExcludedWishwallName(name)) continue;
+                    // ForceActivateRecursive handles dedupe; don't pre-add the root.
+                    activatedGos += ForceActivateRecursive(t, visited);
+                }
+            }
+            if (activatedGos > 0)
+                QuestModPlugin.Log.LogInfo($"WishboardSceneSweep: force-activated {activatedGos} wishwall descendant GameObject(s)");
+        }
+
+        private static int SweepActivateIfPlayerdataTrue(bool bonebottomOnly, bool allWishwalls)
+        {
+            int forced = 0;
+            foreach (var gate in Object.FindObjectsByType<ActivateIfPlayerdataTrue>(
+                FindObjectsInactive.Include, FindObjectsSortMode.None))
+            {
+                if (gate == null || gate.gameObject == null) continue;
+
+                string goName = gate.gameObject.name ?? "";
+                string targetName = gate.objectToActivate != null ? gate.objectToActivate.name : "";
+
                 bool match = false;
                 if (bonebottomOnly && string.Equals(gate.boolName,
                         ActivateIfPlayerdataTrueStartPatch.WishboardBoolName,
                         System.StringComparison.Ordinal))
                     match = true;
-                if (allWishwalls)
-                {
-                    string goName = gate.gameObject != null ? gate.gameObject.name : "";
-                    string targetName = gate.objectToActivate != null ? gate.objectToActivate.name : "";
-                    if (goName.IndexOf("wishwall", System.StringComparison.OrdinalIgnoreCase) >= 0
-                        || goName.IndexOf("wish_wall", System.StringComparison.OrdinalIgnoreCase) >= 0
-                        || goName.IndexOf("questboard", System.StringComparison.OrdinalIgnoreCase) >= 0
-                        || goName.IndexOf("quest_board", System.StringComparison.OrdinalIgnoreCase) >= 0
-                        || targetName.IndexOf("wishwall", System.StringComparison.OrdinalIgnoreCase) >= 0
-                        || targetName.IndexOf("wish_wall", System.StringComparison.OrdinalIgnoreCase) >= 0
-                        || targetName.IndexOf("questboard", System.StringComparison.OrdinalIgnoreCase) >= 0
-                        || targetName.IndexOf("quest_board", System.StringComparison.OrdinalIgnoreCase) >= 0)
-                        match = true;
-                }
+                if (allWishwalls && NameLooksLikeWishwall(goName, targetName))
+                    match = true;
                 if (!match) continue;
 
-                // Skip damaged/post-game variants.
-                string targetName2 = gate.objectToActivate != null ? gate.objectToActivate.name : "";
-                if (allWishwalls && (ActivateIfPlayerdataTrueStartPatch.IsExcludedWishwall(targetName2)
-                    || ActivateIfPlayerdataTrueStartPatch.IsExcludedWishwall(gate.gameObject.name)))
+                if (allWishwalls && (IsExcludedWishwallName(targetName) || IsExcludedWishwallName(goName)))
                     continue;
 
                 bool acted = false;
@@ -186,41 +224,53 @@ namespace QuestMod
                 {
                     forced++;
                     QuestModPlugin.LogDebugInfo(
-                        $"WishboardSceneSweep: forced '{gate.gameObject.name}' " +
-                        $"(objectToActivate='{(gate.objectToActivate != null ? gate.objectToActivate.name : "null")}')");
+                        $"WishboardSceneSweep: forced '{goName}' (objectToActivate='{targetName}')");
                 }
             }
+            return forced;
+        }
 
-            if (forced > 0)
-                QuestModPlugin.Log.LogInfo($"WishboardSceneSweep: activated {forced} dormant wishboard gate(s)");
-
-            // Second pass: recursively activate descendants of wishwall ROOTs.
-            // Catches children SetActive(false) at scene-build time.
-            int activatedGos = 0;
-            if (allWishwalls)
+        // Sibling MB type: Bonetown wishboard uses TestGameObjectActivator with a
+        // (defeatedBellBeast OR visitedShellwood) PlayerDataTest — not ActivateIfPDTrue.
+        private static int SweepTestGameObjectActivator(bool bonebottomOnly, bool allWishwalls)
+        {
+            int forcedTga = 0;
+            foreach (var ta in Object.FindObjectsByType<TestGameObjectActivator>(
+                FindObjectsInactive.Include, FindObjectsSortMode.None))
             {
-                var transforms = Object.FindObjectsByType<Transform>(
-                    FindObjectsInactive.Include, FindObjectsSortMode.None);
-                // Dedupe roots+descendants so name-matching children don't get walked twice.
-                var visited = new System.Collections.Generic.HashSet<int>();
-                foreach (var t in transforms)
-                {
-                    if (t == null || t.gameObject == null) continue;
-                    var go = t.gameObject;
-                    if (!go.scene.IsValid() || go.scene.name == "DontDestroyOnLoad") continue;
+                if (ta == null || ta.gameObject == null) continue;
+                string goName = ta.gameObject.name ?? "";
+                string actName = ta.activateGameObject != null ? ta.activateGameObject.name : "";
+                string deactName = ta.deactivateGameObject != null ? ta.deactivateGameObject.name : "";
 
-                    string name = go.name ?? "";
-                    bool nameMatch = false;
-                    foreach (var p in WishwallGoNamePatterns)
-                        if (name.IndexOf(p, System.StringComparison.OrdinalIgnoreCase) >= 0) { nameMatch = true; break; }
-                    if (!nameMatch) continue;
-                    if (ActivateIfPlayerdataTrueStartPatch.IsExcludedWishwall(name)) continue;
-                    // ForceActivateRecursive handles dedupe; don't pre-add the root.
-                    activatedGos += ForceActivateRecursive(t, visited);
+                if (!NameLooksLikeWishwall(goName, actName, deactName)) continue;
+                if (IsExcludedWishwallName(goName) || IsExcludedWishwallName(actName)) continue;
+
+                // Bonebottom-only: only the Bonetown board (match go or activate target).
+                if (bonebottomOnly && !allWishwalls
+                    && !IsBonebottomQuestBoard(goName, actName))
+                    continue;
+
+                bool actedTga = false;
+                if (ta.activateGameObject != null && !ta.activateGameObject.activeSelf)
+                {
+                    ta.activateGameObject.SetActive(true);
+                    actedTga = true;
+                }
+                if (ta.deactivateGameObject != null && ta.deactivateGameObject.activeSelf)
+                {
+                    ta.deactivateGameObject.SetActive(false);
+                    actedTga = true;
+                }
+                if (actedTga)
+                {
+                    forcedTga++;
+                    QuestModPlugin.LogDebugInfo(
+                        $"WishboardSceneSweep: forced TGA on '{goName}' " +
+                        $"(activate='{actName}', deactivate='{deactName}')");
                 }
             }
-            if (activatedGos > 0)
-                QuestModPlugin.Log.LogInfo($"WishboardSceneSweep: force-activated {activatedGos} wishwall descendant GameObject(s)");
+            return forcedTga;
         }
 
         private static int ForceActivateRecursive(Transform root,
@@ -233,7 +283,7 @@ namespace QuestMod
             // Self gated by exclude; children always walked so healthy
             // descendants of an excluded parent still reach.
             string n = root.gameObject.name ?? "";
-            if (!ActivateIfPlayerdataTrueStartPatch.IsExcludedWishwall(n))
+            if (!IsExcludedWishwallName(n))
             {
                 if (!root.gameObject.activeSelf)
                 {

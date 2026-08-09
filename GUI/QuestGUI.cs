@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using BepInEx.Configuration;
 using UnityEngine;
 
 namespace QuestMod
@@ -21,15 +20,13 @@ namespace QuestMod
         private Vector2 checklistScroll;
         private List<QuestInfo> cachedQuestList;
         private bool questListDirty = true;
-        private Vector2 silkSoulScroll;
-        private string thresholdInput = "";
-        private Dictionary<string, string> pointInputs = new Dictionary<string, string>();
 
         // Snapshot on open, revert on close without Save. Scalar compare on
         // the hot path -- JSON would look dirty every frame because Dict/Set
         // iteration order isn't deterministic.
         private string _uiOpenSnapshotSaveData;
-        private string _uiOpenSnapshotTags;
+        // Rules overlay (QuestRequirements user tags / presets) — not a GUI tab.
+        private string _uiOpenSnapshotRules;
         private struct SaveDataSnapshot
         {
             public AllWishesMode Mode;
@@ -43,13 +40,16 @@ namespace QuestMod
             public int InjectedCount;
             public int CompletedCount;
             public int TargetOverrideCount;
-            public int WishOverrideCount;
             public bool BypassFleatopia, BypassMandatory, BypassFaydown, BypassNeedolin, BypassBoneboard, BypassAllWalls;
         }
         private SaveDataSnapshot? _scalarSnapshot;
 
         private void Update()
         {
+#if SELFTEST
+            PollGuiShotTrigger();
+#endif
+
             if (QuestModPlugin.GuiToggleKey.Value.IsDown())
             {
                 if (show) OnGuiClosing(); // closing
@@ -81,7 +81,6 @@ namespace QuestMod
                 InjectedCount = sd.InjectedQuests?.Count ?? 0,
                 CompletedCount = sd.CompletedQuests?.Count ?? 0,
                 TargetOverrideCount = sd.QuestTargetOverrides?.Count ?? 0,
-                WishOverrideCount = sd.WishLocationOverrides?.Count ?? 0,
                 BypassFleatopia = sd.Prereqs?.BypassFleatopia ?? false,
                 BypassMandatory = sd.Prereqs?.BypassMandatoryWishes ?? false,
                 BypassFaydown = sd.Prereqs?.BypassFaydownCloak ?? false,
@@ -104,7 +103,6 @@ namespace QuestMod
                 && a.InjectedCount == b.InjectedCount
                 && a.CompletedCount == b.CompletedCount
                 && a.TargetOverrideCount == b.TargetOverrideCount
-                && a.WishOverrideCount == b.WishOverrideCount
                 && a.BypassFleatopia == b.BypassFleatopia
                 && a.BypassMandatory == b.BypassMandatory
                 && a.BypassFaydown == b.BypassFaydown
@@ -118,8 +116,8 @@ namespace QuestMod
             try
             {
                 _uiOpenSnapshotSaveData = QuestModPlugin.ExportSaveDataToJson();
-                _uiOpenSnapshotTags = QuestRequirements.IsLoaded ? QuestRequirements.ExportTagsJson() : null;
-                _snapshotTagsVersion = QuestRequirements.TagsVersion;
+                _uiOpenSnapshotRules = QuestRequirements.IsLoaded ? QuestRequirements.ExportRulesJson() : null;
+                _snapshotRulesVersion = QuestRequirements.RulesVersion;
                 _scalarSnapshot = CaptureScalarSnapshot();
             }
             catch (System.Exception ex)
@@ -133,21 +131,21 @@ namespace QuestMod
             try
             {
                 bool saveDirty = ScalarDirty();
-                bool tagsDirty = _uiOpenSnapshotTags != null
+                bool rulesDirty = _uiOpenSnapshotRules != null
                     && QuestRequirements.IsLoaded
-                    && !string.Equals(QuestRequirements.ExportTagsJson(), _uiOpenSnapshotTags,
+                    && !string.Equals(QuestRequirements.ExportRulesJson(), _uiOpenSnapshotRules,
                         System.StringComparison.Ordinal);
                 if (saveDirty && _uiOpenSnapshotSaveData != null)
                 {
                     QuestModPlugin.ImportSaveDataFromJson(_uiOpenSnapshotSaveData);
                     QuestModToast.Show("Discarded SaveData edits", new Color(0.9f, 0.7f, 0.4f), 3f);
                 }
-                if (tagsDirty)
+                if (rulesDirty)
                 {
-                    QuestRequirements.ImportTagsJson(_uiOpenSnapshotTags);
-                    QuestModToast.Show("Discarded tag edits", new Color(0.9f, 0.7f, 0.4f), 3f);
+                    QuestRequirements.ImportRulesJson(_uiOpenSnapshotRules);
+                    QuestModToast.Show("Discarded rules edits", new Color(0.9f, 0.7f, 0.4f), 3f);
                 }
-                if (saveDirty || tagsDirty)
+                if (saveDirty || rulesDirty)
                     QuestModPlugin.Log.LogInfo("UI closed without explicit save: reverted to snapshot");
             }
             catch (System.Exception ex)
@@ -161,8 +159,8 @@ namespace QuestMod
             try
             {
                 _uiOpenSnapshotSaveData = QuestModPlugin.ExportSaveDataToJson();
-                _uiOpenSnapshotTags = QuestRequirements.IsLoaded ? QuestRequirements.ExportTagsJson() : null;
-                _snapshotTagsVersion = QuestRequirements.TagsVersion;
+                _uiOpenSnapshotRules = QuestRequirements.IsLoaded ? QuestRequirements.ExportRulesJson() : null;
+                _snapshotRulesVersion = QuestRequirements.RulesVersion;
                 _scalarSnapshot = CaptureScalarSnapshot();
             }
             catch { }
@@ -171,7 +169,6 @@ namespace QuestMod
             _resetAllArmedAt = -1f;
             _importArmedAt = -1f;
             _bulkResetArmedAt = -1f;
-            _tagsResetArmedAt = -1f;
             QuestModToast.Show("Changes saved", new Color(0.5f, 0.9f, 0.5f), 2.5f);
         }
 
@@ -181,15 +178,15 @@ namespace QuestMod
             try
             {
                 _uiOpenSnapshotSaveData = QuestModPlugin.ExportSaveDataToJson();
-                _uiOpenSnapshotTags = QuestRequirements.IsLoaded ? QuestRequirements.ExportTagsJson() : null;
-                _snapshotTagsVersion = QuestRequirements.TagsVersion;
+                _uiOpenSnapshotRules = QuestRequirements.IsLoaded ? QuestRequirements.ExportRulesJson() : null;
+                _snapshotRulesVersion = QuestRequirements.RulesVersion;
                 _scalarSnapshot = CaptureScalarSnapshot();
             }
             catch { }
         }
 
-        // Match = clean without re-serializing Tags.
-        private int _snapshotTagsVersion = -1;
+        // Match = clean without re-serializing the rules overlay.
+        private int _snapshotRulesVersion = -1;
 
         internal bool HasUnsavedChanges()
         {
@@ -199,20 +196,20 @@ namespace QuestMod
                 if (!_scalarSnapshot.HasValue && QuestModPlugin.Instance?.SaveData != null)
                 {
                     _uiOpenSnapshotSaveData = QuestModPlugin.ExportSaveDataToJson();
-                    _uiOpenSnapshotTags = QuestRequirements.IsLoaded ? QuestRequirements.ExportTagsJson() : null;
-                    _snapshotTagsVersion = QuestRequirements.TagsVersion;
+                    _uiOpenSnapshotRules = QuestRequirements.IsLoaded ? QuestRequirements.ExportRulesJson() : null;
+                    _snapshotRulesVersion = QuestRequirements.RulesVersion;
                     _scalarSnapshot = CaptureScalarSnapshot();
                 }
                 if (ScalarDirty()) return true;
-                if (_uiOpenSnapshotTags != null && QuestRequirements.IsLoaded)
+                if (_uiOpenSnapshotRules != null && QuestRequirements.IsLoaded)
                 {
-                    // Fast: same TagsVersion = clean.
-                    if (QuestRequirements.TagsVersion == _snapshotTagsVersion) return false;
+                    // Fast: same RulesVersion = clean.
+                    if (QuestRequirements.RulesVersion == _snapshotRulesVersion) return false;
                     // Desynced: full JSON compare and re-stamp.
-                    var cur = QuestRequirements.ExportTagsJson();
-                    if (!string.Equals(cur, _uiOpenSnapshotTags, System.StringComparison.Ordinal))
+                    var cur = QuestRequirements.ExportRulesJson();
+                    if (!string.Equals(cur, _uiOpenSnapshotRules, System.StringComparison.Ordinal))
                         return true;
-                    _snapshotTagsVersion = QuestRequirements.TagsVersion;
+                    _snapshotRulesVersion = QuestRequirements.RulesVersion;
                 }
             }
             catch { }
@@ -321,29 +318,18 @@ namespace QuestMod
             GUI.DragWindow();
         }
 
-        // Cache tab arrays -- Draw runs per IMGUI event, tabs change rarely.
-        private bool _cachedSilkSoulTab = false;
-
+        // Tabs are fixed (plus optional SelfTest when COMPILE_SELFTEST=true). Rebuild once.
         private void RebuildTabs()
         {
-            bool silkSoul = QuestModPlugin.EnableSilkSoulTab.Value;
-            if (tabs != null && silkSoul == _cachedSilkSoulTab) return;
-            _cachedSilkSoulTab = silkSoul;
+            if (tabs != null) return;
 
-            var names = new System.Collections.Generic.List<string> { "Quests", "Targets", "Delivery", "Checklist" };
-            var drawers = new System.Collections.Generic.List<System.Action> { DrawQuestsTab, DrawCompletionTab, DrawDeliveryTab, DrawChecklistTab };
+            var names = new System.Collections.Generic.List<string> { "Quests", "Targets", "Delivery", "Checklist", "Tools" };
+            var drawers = new System.Collections.Generic.List<System.Action> { DrawQuestsTab, DrawCompletionTab, DrawDeliveryTab, DrawChecklistTab, DrawToolsTab };
 
-            if (silkSoul)
-            {
-                names.Add("Silk & Soul");
-                drawers.Add(DrawSilkSoulTab);
-            }
-
-            names.Add("Tags");
-            drawers.Add(DrawTagsTab);
-
-            names.Add("Tools");
-            drawers.Add(DrawToolsTab);
+#if SELFTEST
+            names.Add("SelfTest");
+            drawers.Add(DrawSelfTestTab);
+#endif
 
             tabs = names.ToArray();
             tabDrawers = drawers.ToArray();

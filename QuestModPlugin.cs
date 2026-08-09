@@ -35,10 +35,6 @@ namespace QuestMod
                     _saveData.InjectedQuests = new System.Collections.Generic.HashSet<string>();
                 if (_saveData.CompletedQuests == null)
                     _saveData.CompletedQuests = new System.Collections.Generic.HashSet<string>();
-                if (_saveData.WishLocationOverrides == null)
-                    _saveData.WishLocationOverrides = new System.Collections.Generic.Dictionary<string, string>();
-                if (_saveData.WishLocationTriggersFired == null)
-                    _saveData.WishLocationTriggersFired = new System.Collections.Generic.HashSet<string>();
                 if (_saveData.Prereqs == null)
                     _saveData.Prereqs = new GranularPrereqs();
 
@@ -184,7 +180,6 @@ namespace QuestMod
             if (d.InjectedQuests != null && d.InjectedQuests.Count > 0) return true;
             if (d.CompletedQuests != null && d.CompletedQuests.Count > 0) return true;
             if (d.QuestTargetOverrides != null && d.QuestTargetOverrides.Count > 0) return true;
-            if (d.WishLocationOverrides != null && d.WishLocationOverrides.Count > 0) return true;
             if (!string.IsNullOrEmpty(d.ActiveDslPreset) && d.ActiveDslPreset != "vanilla") return true;
             if (d.EnableCustomRequirements.HasValue) return true;
             if (d.EnableFullRemoteComplete.HasValue) return true;
@@ -321,8 +316,6 @@ namespace QuestMod
                 throw new System.ArgumentException($"CompletedQuests too large ({imported.CompletedQuests.Count} > {maxEntries})");
             if (imported.QuestTargetOverrides != null && imported.QuestTargetOverrides.Count > maxEntries)
                 throw new System.ArgumentException($"QuestTargetOverrides too large ({imported.QuestTargetOverrides.Count} > {maxEntries})");
-            if (imported.WishLocationOverrides != null && imported.WishLocationOverrides.Count > maxEntries)
-                throw new System.ArgumentException($"WishLocationOverrides too large ({imported.WishLocationOverrides.Count} > {maxEntries})");
 
             Instance.SaveData = imported;
             Log.LogInfo("ImportSaveDataFromJson: applied imported save state (safety gate preserved from live save)");
@@ -367,10 +360,8 @@ namespace QuestMod
         public static ConfigEntry<bool> DevForceOperations { get; private set; } = null!;
         // Pure is hidden by default so it doesn't look like a peer to Adjusted.
         public static ConfigEntry<bool> ShowPureWishesMode { get; private set; } = null!;
-        public static ConfigEntry<bool> EnableSilkSoulTab { get; private set; } = null!;
         public static ConfigEntry<string> ActivePreset { get; private set; } = null!;
         public static ConfigEntry<bool> EnableCustomRequirements { get; private set; } = null!;
-        public static ConfigEntry<bool> EnableWishLocationReassignment { get; private set; } = null!;
         public static ConfigEntry<bool> EnableFullRemoteComplete { get; private set; } = null!;
         public static ConfigEntry<bool> GourmandStopDecay { get; private set; } = null!;
         public static ConfigEntry<float> GourmandDecaySeconds { get; private set; } = null!;
@@ -480,21 +471,12 @@ namespace QuestMod
                 "BypassWishboardLock",
                 false,
                 new ConfigDescription(
-                    "Force-activate the Bonetown wishboard without defeating the Bell Beast. " +
-                    "Runtime-only override on the ActivateIfPlayerdataTrue gate, does NOT modify PlayerData, " +
-                    "so disabling the toggle restores the vanilla lock immediately.",
+                    "Force-activate the Bonetown wishboard without defeating the Bell Beast or visiting Shellwood. " +
+                    "Runtime-only override: per-scene SetActive on the wishboard's TestGameObjectActivator and any " +
+                    "ActivateIfPlayerdataTrue gate. Does NOT modify PlayerData, so disabling the toggle restores " +
+                    "the vanilla state on the next scene load.",
                     null,
                     new { Order = 2 })
-            );
-
-            EnableSilkSoulTab = Config.Bind(
-                "Features",
-                "EnableSilkSoulTab",
-                true,
-                new ConfigDescription(
-                    "Show the Silk & Soul tab in the Quest Manager GUI.",
-                    null,
-                    new { Order = 1 })
             );
 
             EnableCustomRequirements = Config.Bind(
@@ -519,28 +501,14 @@ namespace QuestMod
                     new { Order = 2 })
             );
 
-            // See docs/WishLocationReassignment.md.
-            EnableWishLocationReassignment = Config.Bind(
-                "Features",
-                "EnableWishLocationReassignment",
-                false,
-                new ConfigDescription(
-                    "[STRETCH - NOT YET IMPLEMENTED] Allow quests to be accepted from non-default sources " +
-                    "(NPC wishes from wishboards; wishboard wishes from world locations). " +
-                    "This flag is a placeholder; no behavior is wired up yet.",
-                    null,
-                    new { Order = 99 })
-            );
-
             EnableFullRemoteComplete = Config.Bind(
                 "Features",
                 "EnableFullRemoteComplete",
                 false,
                 new ConfigDescription(
-                    "When ON, the per quest Complete button in the Quests tab routes through " +
-                    "QuestManager so vanilla side effects (item deductions, rewards, dialogue " +
-                    "flags) fire. When OFF (default), the button only flips QuestData flags " +
-                    "(legacy behaviour, useful for dev/debug).  in TODO.md.",
+                    "When ON, the per-quest Complete button mirrors NPC turn-in (item deduct, rewards, " +
+                    "cascades). When OFF (default), Complete only flips QuestData flags — minigame " +
+                    "and world-state quests will not progress. Use Undo on a completed row to reverse a flag-only complete.",
                     null,
                     new { Order = 7 })
             );
@@ -650,6 +618,18 @@ namespace QuestMod
 
             Log.LogInfo($"QuestMod initialized - WishesMode={WishesMode}, AllQuestsAccepted={AllQuestsAccepted}");
             Log.LogInfo("  F9 = Quest Manager GUI");
+
+#if SELFTEST
+            // QUESTMOD_SELFTEST=1 → IPC + GuiShots only (no auto ContinueGame/quit).
+            // QUESTMOD_SELFTEST_FULL=1 → also run SelfTest auto suite (loads save, asserts, quits).
+            if (System.Environment.GetEnvironmentVariable("QUESTMOD_SELFTEST") == "1"
+                || System.Environment.GetEnvironmentVariable("QUESTMOD_SELFTEST_FULL") == "1")
+            {
+                SelfTestIpc.Initialize();
+                if (System.Environment.GetEnvironmentVariable("QUESTMOD_SELFTEST_FULL") == "1")
+                    SelfTest.Initialize();
+            }
+#endif
         }
 
         private void OnActiveSceneChanged(UnityEngine.SceneManagement.Scene from, UnityEngine.SceneManagement.Scene to)
@@ -662,7 +642,6 @@ namespace QuestMod
             LastWishesModeChange = AllWishesMode.Disabled;
             LastWishesModeChangeRealtime = -1f;
             _saveData = new QuestModSaveData();
-            SilkSoulOverrides.Reset();
             QuestCompletionOverrides.ResetSlotState();
             Log?.LogInfo("Returned to title, mode reset");
         }

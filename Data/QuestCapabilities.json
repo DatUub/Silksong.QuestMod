@@ -15,6 +15,11 @@
         "Shiny Bell Goomba",
         "Extractor Blue"
     ],
+    "worldStateComplete": [
+        "Flea Games",
+        "Flea Games Pre"
+    ],
+
     "mutuallyExclusive": {
         "Huntress Quest": "Huntress Quest Runt",
         "Huntress Quest Runt": "Huntress Quest"
@@ -22,51 +27,6 @@
     "sharedTargets": {
         "Huntress Quest": "Huntress Quest Runt",
         "Huntress Quest Runt": "Huntress Quest"
-    },
-    "silkSoul": {
-        "defaultThreshold": 17,
-        "requiredQuests": [
-            "Brolly Get",
-            "Building Materials",
-            "Building Materials (Bridge)",
-            "Crow Feathers",
-            "Songclave Donation 1",
-            "Songclave Donation 2",
-            "Belltown House Start",
-            "Belltown House Mid",
-            "Shakra Final Quest",
-            "Save Sherma"
-        ],
-        "pointValues": {
-            "Mossberry Collection 1": 1.0,
-            "Building Materials (Statue)": 1.0,
-            "Shell Flowers": 1.0,
-            "Rock Rollers": 1.0,
-            "A Pinsmiths Tools": 1.0,
-            "Skull King": 1.0,
-            "Fine Pins": 1.0,
-            "Roach Killing": 1.0,
-            "Great Gourmand": 1.0,
-            "Extractor Blue": 1.0,
-            "Journal": 1.0,
-            "Shiny Bell Goomba": 1.0,
-            "Beastfly Hunt": 1.0,
-            "Huntress Quest": 1.0,
-            "Pilgrim Rags": 1.0,
-            "Save City Merchant": 1.0,
-            "Save City Merchant Bridge": 1.0,
-            "Song Knight": 1.0,
-            "Song Pilgrim Cloaks": 1.0,
-            "Broodmother Hunt": 1.0,
-            "Save Courier Short": 1.0,
-            "Save Courier Tall": 1.0,
-            "Courier Delivery Bonebottom": 0.5,
-            "Courier Delivery Pilgrims Rest": 0.5,
-            "Courier Delivery Songclave": 0.5,
-            "Courier Delivery Fleatopia": 0.5,
-            "Courier Delivery Dustpens Slave": 0.5,
-            "Courier Delivery Mask Maker": 0.5
-        }
     },
     "maxCaps": {
         "Shiny Bell Goomba": [

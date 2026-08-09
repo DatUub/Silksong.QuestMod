@@ -1,7 +1,9 @@
 # Quest Modding Capabilities
 
-Detailed reference for all 82 quests in Hollow Knight: Silksong, organized by wish type.
+Detailed reference for quests in Hollow Knight: Silksong, organized by wish type.
 Documents internal engine data, targets, prerequisites, and what QuestMod can modify.
+
+For Complete / Undo / Remote Complete behaviour, see [../CompleteAndUndo.md](../CompleteAndUndo.md).
 
 ## Legend
 

@@ -12,12 +12,21 @@ namespace QuestMod
 
         // Empty = no filter. Case-insensitive over display + internal name.
         private string _questFilter = "";
+        // Status scope: makes Undo on completed rows easy to find (Discord feedback).
+        private int _questStatusScope; // 0=Active, 1=Completed, 2=All
 
         private bool QuestFilterMatches(string name, string display)
         {
             if (string.IsNullOrEmpty(_questFilter)) return true;
             return (name?.IndexOf(_questFilter, System.StringComparison.OrdinalIgnoreCase) >= 0)
                 || (display?.IndexOf(_questFilter, System.StringComparison.OrdinalIgnoreCase) >= 0);
+        }
+
+        private bool QuestStatusMatches(bool isCompleted)
+        {
+            if (_questStatusScope == 0) return !isCompleted; // Active
+            if (_questStatusScope == 1) return isCompleted;  // Completed (Undo here)
+            return true; // All
         }
 
         private void DrawQuestsTab()
@@ -33,9 +42,29 @@ namespace QuestMod
             GUILayout.BeginHorizontal();
             GUILayout.Label(new GUIContent("Filter:", "Type to filter chains and quests by name (case insensitive)"),
                 GUILayout.Width(45));
-            _questFilter = GUILayout.TextField(_questFilter ?? "", GUILayout.MinWidth(160));
+            _questFilter = GUILayout.TextField(_questFilter ?? "", GUILayout.MinWidth(120));
             if (!string.IsNullOrEmpty(_questFilter) && GUILayout.Button("×", GUILayout.Width(25)))
                 _questFilter = "";
+            GUILayout.Space(6);
+            _questStatusScope = GUILayout.Toolbar(_questStatusScope,
+                new[]
+                {
+                    new GUIContent("Active", "Accepted / not completed (default)"),
+                    new GUIContent("Done", "Completed wishes — use Undo Complete to reverse a flag-only complete"),
+                    new GUIContent("All", "Every quest in the list"),
+                },
+                GUILayout.MinWidth(180));
+            GUILayout.FlexibleSpace();
+            GUI.color = QuestModPlugin.IsFullRemoteCompleteEnabled
+                ? new Color(0.55f, 0.9f, 0.55f)
+                : new Color(0.9f, 0.85f, 0.45f);
+            GUILayout.Label(new GUIContent(
+                QuestModPlugin.IsFullRemoteCompleteEnabled ? "Remote Complete ON" : "Flag-only Complete",
+                "Flag-only only flips QuestData flags (no minigame/world progress).\n" +
+                "Ecstasy of the End / flea carnival: play in the world (or Tools → Remote Complete).\n" +
+                "Already flag-completed by mistake? Switch filter to Done → Undo Complete."),
+                GUILayout.Width(130));
+            GUI.color = Color.white;
             GUILayout.EndHorizontal();
             GUILayout.Space(4);
 
@@ -113,11 +142,15 @@ namespace QuestMod
                 {
                     if (QuestAcceptance.IsChainStep(quest.Name)) continue;
                     if (!QuestFilterMatches(quest.Name, quest.DisplayName)) continue;
+                    if (!QuestStatusMatches(quest.IsCompleted)) continue;
 
                     string status = quest.IsCompleted ? "✓" : (quest.IsAccepted ? "◐" : "○");
                     GUILayout.BeginHorizontal();
                     string displayName = QuestModPlugin.ShowQuestDisplayNames.Value ? quest.DisplayName : quest.Name;
-                    GUILayout.Label(new GUIContent($"{status} {displayName}", quest.Name), GUILayout.Width(180));
+                    string nameTip = quest.Name;
+                    if (QuestAcceptance.BlocksFlagOnlyComplete(quest.Name))
+                        nameTip += "\nNeeds in-world progress (minigame/world). Flag-only Complete is blocked.";
+                    GUILayout.Label(new GUIContent($"{status} {displayName}", nameTip), GUILayout.Width(180));
                     GUILayout.FlexibleSpace();
 
                     // Legacy AllQuestsAvailable overrides these when set, but
@@ -140,21 +173,59 @@ namespace QuestMod
                     if (quest.IsAccepted && !quest.IsCompleted && GUILayout.Button("Drop", GUILayout.Width(45)))
                     { QuestAcceptance.UnacceptQuest(quest.Name); questListDirty = true; }
 
-                    if (quest.IsAccepted && !quest.IsCompleted && GUILayout.Button("Complete", GUILayout.Width(65)))
+                    if (quest.IsAccepted && !quest.IsCompleted)
                     {
-                        // RemoteComplete fires deduct + grant + cascade. Else flag-flip.
-                        QuestAcceptance.LastCompletionRefusal = null;
-                        bool ok;
-                        if (QuestModPlugin.IsFullRemoteCompleteEnabled)
-                            ok = QuestAcceptance.RemoteComplete(quest.Name);
-                        else { QuestAcceptance.CompleteQuest(quest.Name); ok = string.IsNullOrEmpty(QuestAcceptance.LastCompletionRefusal); }
-                        if (!ok && !string.IsNullOrEmpty(QuestAcceptance.LastCompletionRefusal))
-                            QuestModToast.Show("Refused: " + QuestAcceptance.LastCompletionRefusal, new Color(1f, 0.6f, 0.4f), 4f);
-                        questListDirty = true;
+                        bool worldLocked = QuestAcceptance.BlocksFlagOnlyComplete(quest.Name);
+                        string completeTip = QuestModPlugin.IsFullRemoteCompleteEnabled
+                            ? "Mirrors NPC turn-in: deduct targets, grant rewards, cascade dependents."
+                            : worldLocked
+                                ? "Blocked: this wish needs in-world minigame/world progress (e.g. flea carnival). Play it in the world, or enable Tools → Remote Complete."
+                                : "Flag-only: marks the wish complete in QuestData. Minigames / world state are NOT advanced. Use Done → Undo Complete to reverse. Enable Remote Complete in Tools for full turn-in.";
+                        string completeLabel = worldLocked ? "Complete…" : "Complete";
+                        if (worldLocked) GUI.color = new Color(1f, 0.75f, 0.45f);
+                        bool hit = GUILayout.Button(new GUIContent(completeLabel, completeTip), GUILayout.Width(70));
+                        GUI.color = Color.white;
+                        if (hit)
+                        {
+                            QuestAcceptance.LastCompletionRefusal = null;
+                            string label = displayName;
+                            bool ok;
+                            if (QuestModPlugin.IsFullRemoteCompleteEnabled)
+                                ok = QuestAcceptance.RemoteComplete(quest.Name);
+                            else
+                            {
+                                QuestAcceptance.CompleteQuest(quest.Name);
+                                ok = string.IsNullOrEmpty(QuestAcceptance.LastCompletionRefusal);
+                            }
+                            if (!ok && !string.IsNullOrEmpty(QuestAcceptance.LastCompletionRefusal))
+                                QuestModToast.Show(QuestAcceptance.LastCompletionRefusal, new Color(1f, 0.6f, 0.4f), 5.5f);
+                            else if (ok)
+                            {
+                                if (QuestModPlugin.IsFullRemoteCompleteEnabled)
+                                    QuestModToast.Show($"Completed {label}", new Color(0.5f, 0.9f, 0.5f), 2.5f);
+                                else
+                                    QuestModToast.Show($"Flag-completed {label} — Done filter → Undo Complete", new Color(0.85f, 0.85f, 0.5f), 4f);
+                            }
+                            questListDirty = true;
+                        }
                     }
 
-                    if (quest.IsCompleted && GUILayout.Button("Undo", GUILayout.Width(50)))
-                    { QuestAcceptance.UncompleteQuest(quest.Name); questListDirty = true; }
+                    if (quest.IsCompleted)
+                    {
+                        // High-visibility Undo (support: "I completed Dark Below and can't find Undo").
+                        GUI.color = new Color(0.55f, 0.8f, 1f);
+                        if (GUILayout.Button(new GUIContent("Undo Complete",
+                                "Clears the completed flag for this wish. Does not un-grant abilities or refund minigame state. "
+                                + "Tip: use the Done filter to list only completed wishes."),
+                            GUILayout.Width(100)))
+                        {
+                            string label = displayName;
+                            QuestAcceptance.UncompleteQuest(quest.Name);
+                            QuestModToast.Show($"Undid complete: {label}", new Color(0.7f, 0.85f, 1f), 2.5f);
+                            questListDirty = true;
+                        }
+                        GUI.color = Color.white;
+                    }
 
                     GUILayout.EndHorizontal();
                 }

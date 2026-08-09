@@ -42,10 +42,6 @@ namespace QuestMod
 
         public GranularPrereqs Prereqs { get; set; } = new();
 
-        // Stretch-goal scaffold. Not enforced yet.
-        public Dictionary<string, string> WishLocationOverrides { get; set; } = new();
-        public HashSet<string> WishLocationTriggersFired { get; set; } = new();
-
         // Save-safety gate. true = save was created with QuestMod or already
         // used destructive features. Legacy saves stay false until the user
         // opts in via OverrideSafetyForThisSave.

@@ -1,5 +1,44 @@
 # Changelog
 
+## v2.2.0
+
+Polish release: thinner GUI, safer defaults, clearer Complete/Undo.
+
+**Removed (delusional / scaffold addons)**
+- Silk & Soul tab and runtime overrides (`EnableSilkSoulTab` config, `Core/SilkSoulOverrides`).
+- Tags editor tab (custom-requirements DSL still works via Tools presets + `QuestRequirements.user.json`).
+- Wish Location Reassignment scaffold (never implemented; save fields + config entry gone).
+
+**GUI**
+- Tabs are now: Quests, Targets, Delivery, Checklist, Tools.
+- Act 3 (`blackThreadWorld`) one-click toggle removed from Tools (story-state nuke was a support footgun).
+- **Remote Complete** is a first-class Tools toggle (per-save), not buried only in BepInEx config.
+- Quests tab shows Flag-only vs Remote Complete status; Complete/Undo tooltips and toasts explain flag-only behaviour and how to reverse it.
+- Quests filter scopes: **Active / Done / All** so Undo is findable; completed rows use a blue **Undo Complete** button.
+- Flag-only **Complete is refused** for world-state/minigame wishes (default: Flea Games / Ecstasy of the End); toast points at in-world play + Done → Undo Complete.
+
+**Reliability**
+- Mass inject / force-accept drive `QuestRegistry.AllQuests` instead of `FindObjectsOfTypeAll<FullQuestBase>`, via shared `InjectMissingEntries` + Activator-only `QuestDataAccess.CreateEntry` (never mutates an existing RuntimeData value in place).
+- Wishboard scene sweep: shared name/exclude helpers; TestGameObjectActivator (Bonetown) sibling path cleaned up.
+- `GourmandTimerPatch` uses `IsTransientMenuScene` (same Pre_Menu / Quit_To_Menu defense as 2.1.1).
+
+**Build / ship surface**
+- SelfTest + GuiShots compile only with `-p:COMPILE_SELFTEST=true` (not Debug, not Release Thunderstore).
+
+**Structure**
+- `QuestAcceptance` split into partials: core, MassOps, RemoteComplete, Chains.
+- GUI rules-overlay snapshot API: `ExportRulesJson` / `ImportRulesJson` / `RulesVersion` (tag map + on-disk `"tags"` key unchanged; old names remain as aliases).
+
+**Docs**
+- README refreshed for v2.2.0 tabs, Complete/Undo, install, and SelfTest build notes.
+- New `docs/CompleteAndUndo.md`; All Wishes + Custom Requirements docs updated for Tools-only editing and Auto-Accept Available.
+
+**Dependencies**
+- Silksong.FsmUtil 0.3.16 → **0.3.17** (Thunderstore dep pin matched).
+- Microsoft.Unity.Analyzers 1.26.0 → **1.27.0**.
+- Left HarmonyX at 2.9.0 (Dependabot ignore — MonoMod packaging issues on newer lines).
+- Left UnityEngine.Modules at 6000.0.50 (aligned with GameLibs / Silksong; skip 6000.5.x jump).
+
 ## v2.1.2
 
 New toggle: **Auto-Accept Available** (Quests tab header). When on, every scene load accepts any wish where `IsActuallyAvailable()` passes -- respects Adjusted's full chain prereq + exclusion + availableConditions gating. Unlike Accept All, story-locked wishes only accept once their gate naturally unlocks, so chain ordering stays coherent. Toggling on auto-flips Disabled -> Adjusted (same coupling as Accept All). Skipped on legacy saves without the safety override.

@@ -21,23 +21,33 @@
     <PackageReference Include="BepInEx.Core" Version="5.4.21" />
     <PackageReference Include="HarmonyX" Version="2.9.0" />
     <PackageReference Include="Hamunii.BepInEx.AutoPlugin" Version="2.1.0" PrivateAssets="all" />
-    <PackageReference Include="Microsoft.Unity.Analyzers" Version="1.26.0" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.Unity.Analyzers" Version="1.27.0" PrivateAssets="all" />
+    <!-- Keep UnityEngine modules aligned with Silksong game / GameLibs (do not jump to 6000.5.x). -->
     <PackageReference Include="UnityEngine.Modules" Version="6000.0.50" IncludeAssets="compile" />
     <PackageReference Include="Silksong.GameLibs" Version="1.2.0-silksong1.0.30000" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Silksong.FsmUtil" Version="0.3.16" />
+    <PackageReference Include="Silksong.FsmUtil" Version="0.3.17" />
     <PackageReference Include="Silksong.DataManager" Version="1.2.2" />
     <PackageReference Include="Silksong.UnityHelper" Version="1.2.0" />
   </ItemGroup>
+
+  <!-- Dev harness (SelfTest + GuiShots): opt-in only. Release never includes them.
+       Build with: dotnet build -p:COMPILE_SELFTEST=true -->
+  <PropertyGroup Condition="'$(COMPILE_SELFTEST)' == 'true'">
+    <DefineConstants>$(DefineConstants);SELFTEST</DefineConstants>
+  </PropertyGroup>
 
   <ItemGroup>
     <Folder Remove="thunderstore/temp;thunderstore/dist" />
     <EmbeddedResource Include="Data\QuestCapabilities.json" />
     <EmbeddedResource Include="Data\QuestRequirements.json" />
     <Compile Remove="BuildBundles.cs" />
-    <Compile Remove="Util\SelfTest.cs;Util\SelfTestIpc.cs;Util\SelfTestRuntime.cs;Util\SelfTestStages.cs;GUI\QuestGUI.SelfTest.cs" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(COMPILE_SELFTEST)' != 'true'">
+    <Compile Remove="Util\SelfTest.cs;Util\SelfTestIpc.cs;Util\SelfTestRuntime.cs;Util\SelfTestStages.cs;GUI\QuestGUI.SelfTest.cs;GUI\QuestGUI.GuiShots.cs" />
   </ItemGroup>
 
   <Target Name="CopyMod" AfterTargets="PostBuildEvent" Condition="'$(SilksongFolder)' != ''">

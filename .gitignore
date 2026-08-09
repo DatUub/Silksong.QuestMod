@@ -10,3 +10,8 @@ thunderstore/temp/
 thunderstore/dist/
 .agent/TODO.md
 C:
+
+# host-local only (never package / never push)
+GUI/QuestGUI.G*.cs
+GUI/QuestGUI.Se*.cs
+Util/Se*.cs
