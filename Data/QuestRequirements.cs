@@ -22,8 +22,11 @@ namespace QuestMod
 
         public static bool IsLoaded { get; private set; }
 
-        // Bumps on every Tags mutation. GUI uses it to detect dirty state.
-        public static int TagsVersion { get; private set; }
+        // Bumps on every tag-map mutation. GUI dirty-check uses RulesVersion.
+        public static int RulesVersion { get; private set; }
+
+        // Back-compat alias for older callers / SelfTest.
+        public static int TagsVersion => RulesVersion;
 
         public static void AddTag(string questName, string tag)
         {
@@ -32,7 +35,7 @@ namespace QuestMod
                 Tags[questName] = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             if (Tags[questName].Add(tag.Trim()))
             {
-                TagsVersion++;
+                RulesVersion++;
                 SaveTagsToUserOverlay();
             }
         }
@@ -42,14 +45,14 @@ namespace QuestMod
             if (Tags.TryGetValue(questName, out var set) && set.Remove(tag))
             {
                 if (set.Count == 0) Tags.Remove(questName);
-                TagsVersion++;
+                RulesVersion++;
                 SaveTagsToUserOverlay();
             }
         }
 
-        // Export = snapshot for GUI rollback. Import restores. Clear wipes
-        // the user overlay back to the embedded baseline.
-        public static string ExportTagsJson()
+        // Snapshot/restore for GUI open→close rollback (rules overlay = tag map).
+        // On-disk user JSON still uses the "tags" key (schema; do not rename).
+        public static string ExportRulesJson()
         {
             var obj = new JObject();
             foreach (var kvp in Tags)
@@ -62,7 +65,7 @@ namespace QuestMod
             return obj.ToString(Newtonsoft.Json.Formatting.None);
         }
 
-        public static void ImportTagsJson(string json)
+        public static void ImportRulesJson(string json)
         {
             if (string.IsNullOrEmpty(json)) return;
             var parsed = JObject.Parse(json);
@@ -77,9 +80,13 @@ namespace QuestMod
                     Tags[prop.Name] = set;
                 }
             }
-            TagsVersion++;
+            RulesVersion++;
             SaveTagsToUserOverlay();
         }
+
+        // Back-compat aliases.
+        public static string ExportTagsJson() => ExportRulesJson();
+        public static void ImportTagsJson(string json) => ImportRulesJson(json);
 
         public static void ClearAllTagOverrides()
         {
@@ -286,7 +293,7 @@ namespace QuestMod
         {
             Tags.Clear();
             // Always bump so GUI re-checks.
-            TagsVersion++;
+            RulesVersion++;
             PlayerDataWhitelist.Clear();
             Presets.Clear();
             PerQuest.Clear();

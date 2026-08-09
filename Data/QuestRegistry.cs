@@ -8,6 +8,7 @@ namespace QuestMod
 {
     public static class QuestRegistry
     {
+        public static HashSet<string> AllQuests { get; } = new HashSet<string>();
         public static HashSet<string> ExcludedQuests { get; private set; } = new HashSet<string>();
         public static Dictionary<string, string[]> ChainRegistry { get; private set; } = new Dictionary<string, string[]>();
         public static Dictionary<string, string> ChainDisplayNames { get; private set; } = new Dictionary<string, string>();
@@ -24,11 +25,19 @@ namespace QuestMod
         public static Dictionary<string, string> SequentialStagePdPatterns { get; private set; } = new Dictionary<string, string>();
         public static HashSet<string> FarmableExcluded { get; private set; } = new HashSet<string>();
 
-        public static int DefaultThreshold { get; private set; } = 17;
-        public static Dictionary<string, float> SilkSoulPointValues { get; private set; } = new Dictionary<string, float>();
-        public static string[] SilkSoulRequiredQuests { get; private set; } = Array.Empty<string>();
+        // Flag-only Complete is a no-op for these (minigame / world FSM). Prefer
+        // in-world finish; Remote Complete may still not drive minigame scores.
+        // Optional JSON: "worldStateComplete": ["Flea Games", ...] merges in.
+        public static HashSet<string> WorldStateCompleteQuests { get; private set; } = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "Flea Games",
+            "Flea Games Pre",
+        };
 
         public static bool IsLoaded { get; private set; }
+
+        public static bool IsWorldStateComplete(string questName)
+            => !string.IsNullOrEmpty(questName) && WorldStateCompleteQuests.Contains(questName);
 
         public static void Load()
         {
@@ -53,7 +62,7 @@ namespace QuestMod
             LoadFarmableExclude(root);
             LoadMutuallyExclusive(root);
             LoadSharedTargets(root);
-            LoadSilkSoul(root);
+            LoadWorldStateComplete(root);
             LoadMaxCaps(root);
             LoadChecklist(root);
             LoadChains(root);
@@ -61,6 +70,18 @@ namespace QuestMod
 
             IsLoaded = true;
             QuestModPlugin.Log.LogInfo($"QuestRegistry loaded: {DisplayNames.Count} quests, {ChainRegistry.Count} chains, {ChecklistQuests.Count} checklists, {MaxCaps.Count} max caps");
+        }
+
+        private static void LoadWorldStateComplete(JObject root)
+        {
+            var arr = root["worldStateComplete"] as JArray;
+            if (arr == null) return;
+            foreach (var item in arr)
+            {
+                var val = item.Value<string>();
+                if (!string.IsNullOrEmpty(val))
+                    WorldStateCompleteQuests.Add(val);
+            }
         }
 
         private static void LoadExcluded(JObject root)
@@ -104,35 +125,6 @@ namespace QuestMod
             {
                 var val = prop.Value?.Value<string>();
                 if (val != null) SharedTargetQuests[prop.Key] = val;
-            }
-        }
-
-        private static void LoadSilkSoul(JObject root)
-        {
-            var ss = root["silkSoul"] as JObject;
-            if (ss == null) return;
-
-            var threshold = ss["defaultThreshold"];
-            if (threshold != null)
-                DefaultThreshold = threshold.Value<int>();
-
-            var required = ss["requiredQuests"] as JArray;
-            if (required != null)
-            {
-                var list = new List<string>();
-                foreach (var item in required)
-                {
-                    var val = item.Value<string>();
-                    if (val != null) list.Add(val);
-                }
-                SilkSoulRequiredQuests = list.ToArray();
-            }
-
-            var points = ss["pointValues"] as JObject;
-            if (points != null)
-            {
-                foreach (var prop in points)
-                    SilkSoulPointValues[prop.Key] = prop.Value!.Value<float>();
             }
         }
 
@@ -253,6 +245,9 @@ namespace QuestMod
 
         private static void LoadQuest(string questName, JObject? questObj, string? categoryName)
         {
+            if (string.IsNullOrEmpty(questName)) return;
+            AllQuests.Add(questName);
+
             if (categoryName != null)
                 QuestCategories[questName] = categoryName;
 

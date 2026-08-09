@@ -1,6 +1,6 @@
 # All Wishes Mode
 
-Three modes for the All Wishes toggle, set in the Tools tab.
+Three modes for the All Wishes toggle, set in the **Tools** tab.
 
 **Disabled** is vanilla, nothing changes.
 
@@ -15,6 +15,15 @@ Three modes for the All Wishes toggle, set in the Tools tab.
 - Mr Mushroom per-stage encounter lock (stages you haven't met can't be ticked)
 
 NPC spawn flags get auto-set on scene load so quest-givers actually show up (Mapper, Sherma, Shakra, Mr Mushroom first encounter, City Merchant locations).
+
+## Related Tools toggles
+
+| Toggle | Behaviour |
+|--------|-----------|
+| **All Quests Accepted** | Each scene load injects + accepts the full registry (respecting exclusions). Forces Adjusted if you were in Disabled. Heavy-handed. |
+| **Auto-Accept Available** | Each scene load accepts only wishes that already pass `IsActuallyAvailable()` (chain + exclusion + availableConditions). Story-locked wishes wait for natural unlock. Also auto-flips Disabled → Adjusted. Safer than Accept All for chain coherence. |
+
+Both require the save-safety override on legacy saves.
 
 Flipping AllQuestsAccepted on while in Disabled auto-promotes to Adjusted with a toast. They need each other to do anything useful.
 

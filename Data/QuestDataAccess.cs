@@ -96,5 +96,66 @@ namespace QuestMod
             ReflectionCache.WriteMember(wasEverCompletedMember, boxed, wasEver);
             return boxed;
         }
+
+        private static System.Type cachedValType;
+
+        /// <summary>
+        /// Fresh RuntimeData value for a quest key. Never mutates an existing dictionary entry.
+        /// Uses Activator on the dictionary value type only — fails loud if the type is unknown
+        /// or has no parameterless constructor.
+        /// </summary>
+        /// <param name="rtForTypeHint">Optional live dictionary used only to sample value type
+        /// if generic args on RuntimeData are unavailable.</param>
+        internal static object CreateEntry(IDictionary rtForTypeHint, bool seen, bool accepted, bool completed, bool wasEver)
+        {
+            var valType = ResolveValType(rtForTypeHint);
+            if (valType == null)
+            {
+                QuestModPlugin.Log.LogError("CreateEntry: could not resolve RuntimeData value type");
+                return null;
+            }
+
+            try
+            {
+                var qd = System.Activator.CreateInstance(valType);
+                return SetFields(qd, seen, accepted, completed, wasEver);
+            }
+            catch (System.Exception ex)
+            {
+                QuestModPlugin.Log.LogError(
+                    $"CreateEntry: Activator failed for {valType.FullName}: {ex.Message}");
+                return null;
+            }
+        }
+
+        private static System.Type ResolveValType(IDictionary rtForTypeHint)
+        {
+            if (cachedValType != null) return cachedValType;
+
+            if (rtField != null)
+            {
+                var args = rtField.FieldType.GetGenericArguments();
+                if (args != null && args.Length >= 2)
+                {
+                    cachedValType = args[1];
+                    return cachedValType;
+                }
+            }
+
+            // Last resort: type of any existing entry (dictionary may be empty early in a run).
+            if (rtForTypeHint != null)
+            {
+                foreach (DictionaryEntry entry in rtForTypeHint)
+                {
+                    if (entry.Value != null)
+                    {
+                        cachedValType = entry.Value.GetType();
+                        return cachedValType;
+                    }
+                }
+            }
+
+            return null;
+        }
     }
 }

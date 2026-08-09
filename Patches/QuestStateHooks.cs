@@ -204,7 +204,11 @@ namespace QuestMod
             if (!AnyQuestAvailable())
                 return;
 
-            var fsms = Object.FindObjectsByType<PlayMakerFSM>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            // Exclude inactive GOs at scan time. Including them was the source
+            // of the NRE cascade -- pre-init FSMs on dormant scene roots NRE
+            // inside PlayMaker's lazy CreateAction when we touch state.Actions.
+            // 500+ NREs/frame stalls the game and can crash it.
+            var fsms = Object.FindObjectsByType<PlayMakerFSM>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
             foreach (var fsm in fsms)
             {
                 if (fsm == null) continue;
@@ -214,8 +218,9 @@ namespace QuestMod
                 if (fsm.gameObject.GetComponent<SceneAdditiveLoadConditional>() != null)
                     continue;
 
-                // Skip pre-init FSMs. Touching FsmStates lazy-inits ActionData
-                // and NPEs when the underlying Fsm hasn't been wired yet.
+                // Secondary guard: even with Exclude, a few FSMs slip through
+                // with activeInHierarchy=true but Fsm not yet wired.
+                if (!fsm.gameObject.activeInHierarchy) continue;
                 if (fsm.Fsm == null) continue;
 
                 try
@@ -241,6 +246,11 @@ namespace QuestMod
 
             foreach (var state in fsm.FsmStates)
             {
+                // state.Fsm null means the state isn't wired into the FSM context
+                // yet -- touching state.Actions here triggers PlayMaker's lazy
+                // CreateAction which emits "get_actions: Fsm not initialized"
+                // and NREs internally. Skip these states cleanly.
+                if (state == null || state.Fsm == null) continue;
                 if (state.Actions == null) continue;
 
                 foreach (var action in state.Actions)
@@ -640,6 +650,11 @@ namespace QuestMod
             if (!QuestPolicyStore.IsAvailable(__instance.name))
                 return;
 
+            // Adjusted respects the game's natural discovery flow. The mode's
+            // job is to loosen post-discovery gates (chain prereqs, exclusions,
+            // arena-reuse), not to bypass the "have you reached this quest yet"
+            // path the game itself enforces. Skipping discovery shoves the game
+            // into states it wasn't designed for (UI for unloaded NPCs, etc.).
             if (!QuestModPlugin.IsQuestDiscovered(__instance.name))
                 return;
 

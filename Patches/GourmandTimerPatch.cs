@@ -23,11 +23,15 @@ namespace QuestMod
         public static void Initialize()
         {
             SceneManager.sceneLoaded += OnSceneLoaded;
+            // Resolve types + apply TakeHit Harmony at plugin init so SelfTest
+            // cluster_L can see the patch before the first gameplay scene.
+            // totalTimer instance overrides still re-apply on scene load below.
+            EnsureResolved();
         }
 
         private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
         {
-            if (string.IsNullOrEmpty(scene.name) || scene.name == "Menu_Title")
+            if (string.IsNullOrEmpty(scene.name) || QuestModConstants.IsTransientMenuScene(scene.name))
                 return;
 
             EnsureResolved();
@@ -41,7 +45,6 @@ namespace QuestMod
         private static void EnsureResolved()
         {
             if (resolved) return;
-            resolved = true;
 
             // Find DeliveryQuestItem (BASE class). Direct reflection load fails
             // on Mono-only constructs in this game, so iterate loaded assemblies
@@ -58,11 +61,13 @@ namespace QuestMod
 
             if (deliveryQuestItemType == null)
             {
+                // Game assemblies may not be loaded at plugin Awake — retry on scene load.
                 QuestModPlugin.Log.LogWarning(
-                    "GourmandTimerPatch: DeliveryQuestItem type not found at runtime. " +
-                    "Decay overrides will be no-ops.");
+                    "GourmandTimerPatch: DeliveryQuestItem type not found yet; will retry on scene load.");
                 return;
             }
+
+            resolved = true;
 
             // totalTimer is a private/serialized float on DeliveryQuestItem.
             totalTimerField = deliveryQuestItemType.GetField(

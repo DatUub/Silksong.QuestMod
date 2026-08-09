@@ -7,6 +7,15 @@ Two layers stacked on top of each other:
 - presets that sweep many quests at once via tags
 - per-quest overrides for fine-grained tweaks
 
+## Editing (v2.2.0+)
+
+There is **no Tags editor tab** anymore. Use:
+
+1. **Tools** — preset picker / custom-requirements enable (per save), or  
+2. Edit `BepInEx/config/QuestMod/QuestRequirements.user.json` directly.
+
+The F9 panel still snapshots rules on open and can discard unsaved rules edits when you close without Save Changes (same as save-data discard).
+
 ## Files
 
 Embedded baseline ships with the mod: `QuestMod.Data.QuestRequirements.json` (read-only). User overlay lives at `BepInEx/config/QuestMod/QuestRequirements.user.json` (created on first run, edit freely). The overlay merges over the baseline, arrays union, objects replace by key. Edits land on the next save reload.
