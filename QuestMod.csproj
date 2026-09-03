@@ -23,7 +23,7 @@
     <PackageReference Include="Hamunii.BepInEx.AutoPlugin" Version="2.1.0" PrivateAssets="all" />
     <PackageReference Include="Microsoft.Unity.Analyzers" Version="1.27.0" PrivateAssets="all" />
     <!-- Keep UnityEngine modules aligned with Silksong game / GameLibs (do not jump to 6000.5.x). -->
-    <PackageReference Include="UnityEngine.Modules" Version="6000.0.50" IncludeAssets="compile" />
+    <PackageReference Include="UnityEngine.Modules" Version="6000.5.11" IncludeAssets="compile" />
     <PackageReference Include="Silksong.GameLibs" Version="1.2.0-silksong1.0.30000" />
   </ItemGroup>
 
