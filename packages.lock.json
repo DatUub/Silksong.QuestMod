@@ -36,9 +36,9 @@
       },
       "Microsoft.Unity.Analyzers": {
         "type": "Direct",
-        "requested": "[1.27.0, )",
-        "resolved": "1.27.0",
-        "contentHash": "S8eU12HzdUjN++OBz7F08ft3weYbk5DR1rKKjCvpugqtdGHHC4Om8fJ/jGnJ5QMJY+SzzFHQTyQqfA1neAV+pw=="
+        "requested": "[1.28.0, )",
+        "resolved": "1.28.0",
+        "contentHash": "UB8Sy27yFLqahBULPI7NmJbsV8B+6fTqOWRYgVhPSRE3XGMEfrWwBDLv2W1TqIrvrh6QQ1DBSJIhCYejNviXaQ=="
       },
       "Silksong.DataManager": {
         "type": "Direct",
